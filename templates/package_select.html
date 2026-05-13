@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}パック選択{% endblock %}
+{% block content %}
+<section class="container py-4 py-lg-5">
+  {% include "_estimate_status.html" %}
+
+  <div class="wizard-head">
+    <div>
+      <p class="eyebrow">Step 2</p>
+      <h1>パックを選択</h1>
+      <p>{{ flow.device_type }} 向けの見積パックを選んでください。</p>
+    </div>
+  </div>
+
+  <form method="post" class="wizard-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="choice-grid three">
+      <label class="choice-card package-card">
+        <input type="radio" name="package_type" value="基本パック" data-screens="3" required>
+        <span class="choice-title">基本パック</span>
+        <span class="choice-price">3画面</span>
+        <small>まず小さく始めたい方向け。</small>
+      </label>
+      <label class="choice-card package-card">
+        <input type="radio" name="package_type" value="運用パック" data-screens="6" required>
+        <span class="choice-title">運用パック</span>
+        <span class="choice-price">6画面</span>
+        <small>実運用に必要な画面をまとめたい方向け。</small>
+      </label>
+      <label class="choice-card package-card">
+        <input type="radio" name="package_type" value="カスタムパック" data-screens="1" required>
+        <span class="choice-title">カスタムパック</span>
+        <span class="choice-price">画面数・機能を指定</span>
+        <small>必要機能を自由に組み合わせたい方向け。</small>
+      </label>
+    </div>
+    <div class="wizard-actions">
+      <a class="btn btn-outline-dark" href="{{ url_for('main.device_select') }}">戻る</a>
+      <button class="btn btn-primary btn-lg" type="submit">次へ</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}
+  <script>
+    window.estimateConfig = {
+      unitPrice: {{ device_prices[flow.device_type] }},
+      customDefaultScreens: 1
+    };
+  </script>
+  <script src="{{ url_for('static', filename='js/estimate.js') }}"></script>
+{% endblock %}

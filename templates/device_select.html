@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}デバイス選択{% endblock %}
+{% block content %}
+<section class="container py-4 py-lg-5">
+  {% include "_estimate_status.html" %}
+
+  <div class="wizard-head">
+    <div>
+      <p class="eyebrow">Step 1</p>
+      <h1>対応デバイスを選択</h1>
+      <p>アプリを使う画面環境を選んでください。</p>
+    </div>
+  </div>
+
+  <form method="post" class="wizard-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="choice-grid">
+      {% for name, price in device_prices.items() %}
+        <label class="choice-card">
+          <input type="radio" name="device_type" value="{{ name }}" required>
+          <span class="choice-title">{{ name }}</span>
+          <span class="choice-price">{{ "{:,}".format(price) }}円 / 画面</span>
+        </label>
+      {% endfor %}
+    </div>
+    <div class="wizard-actions">
+      <a class="btn btn-outline-dark" href="{{ url_for('main.index') }}">戻る</a>
+      <button class="btn btn-primary btn-lg" type="submit">次へ</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

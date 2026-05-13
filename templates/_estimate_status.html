@@ -1,0 +1,19 @@
+{% if estimate_status %}
+  <div class="estimate-status" aria-label="見積もりの進行状況">
+    <div class="progress-trail">
+      {% for step in estimate_status.steps %}
+        {% if step.href and step.state == "done" %}
+          <a class="progress-step is-{{ step.state }}" href="{{ step.href }}">{{ step.label }}</a>
+        {% else %}
+          <span class="progress-step is-{{ step.state }}">
+            {% if step.state == "active" %}[{{ step.label }}]{% else %}{{ step.label }}{% endif %}
+          </span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div class="current-total">
+      <span>現在の金額</span>
+      <strong data-current-total>{{ "{:,}".format(estimate_status.total_price) }}円</strong>
+    </div>
+  </div>
+{% endif %}

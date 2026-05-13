@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}見積結果{% endblock %}
+{% block content %}
+<section class="container py-4 py-lg-5">
+  {% include "_estimate_status.html" %}
+
+  <div class="page-heading">
+    <div>
+      <h1>見積結果</h1>
+      <p>選択内容を保持したまま問い合わせに進めます。</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr><th>項目</th><th class="text-end">金額</th></tr>
+          </thead>
+          <tbody>
+            {% for item in estimate.items %}
+              <tr>
+                <td>{{ item.item_name }}</td>
+                <td class="text-end">{{ "{:,}".format(item.price) }}円</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="summary-panel sticky-lg-top result-side">
+        <div class="small text-secondary">合計</div>
+        <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円</div>
+        <dl class="row small mt-3 mb-4">
+          <dt class="col-5">デバイス</dt><dd class="col-7">{{ estimate.device_type }}</dd>
+          <dt class="col-5">パック</dt><dd class="col-7">{{ estimate.package_type }}</dd>
+        </dl>
+        <div class="d-grid gap-2">
+          <a class="btn btn-outline-dark" href="{{ back_url }}">戻る</a>
+          <a class="btn btn-primary" href="{{ url_for('main.inquiry', estimate_id=estimate.id) }}">問い合わせへ進む</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

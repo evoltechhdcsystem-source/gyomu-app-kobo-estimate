@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}送信完了{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="completion">
+    <h1>お問い合わせを受け付けました</h1>
+    <p>受付番号は #{{ inquiry.id }} です。担当者より折り返しご連絡します。</p>
+    <a class="btn btn-primary" href="{{ url_for('main.index') }}">TOPへ戻る</a>
+  </div>
+</section>
+{% endblock %}
+

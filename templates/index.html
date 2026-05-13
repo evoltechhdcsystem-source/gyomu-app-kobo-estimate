@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}概算見積もり - 業務アプリ工房{% endblock %}
+{% block content %}
+<section class="hero-band">
+  <div class="container hero-inner home-hero">
+    <div class="hero-visual">
+      <img src="{{ url_for('static', filename='img/topimage2.png') }}" alt="業務アプリ見積もりのイメージ">
+    </div>
+
+    <div class="hero-copy-block">
+      <p class="eyebrow">Estimate Simulator</p>
+      <h1><span>業務アプリ工房</span><span>見積もりWebアプリ</span></h1>
+      <p class="hero-copy">最短2step、30秒で業務アプリ開発の概算費用を確認できます。</p>
+      <a class="btn btn-primary btn-lg" href="{{ url_for('main.device_select') }}">見積もりスタート</a>
+    </div>
+
+    <div class="home-feature-grid">
+      <div class="home-feature-card">
+        <img class="feature-illo" src="{{ url_for('static', filename='img/1_option.png') }}" alt="オプション追加可能">
+        <strong>オプション追加可能</strong>
+      </div>
+      <div class="home-feature-card">
+        <img class="feature-illo" src="{{ url_for('static', filename='img/2_pack3.png') }}" alt="3つのパックから選べる">
+        <strong>3つのパックから選べる</strong>
+      </div>
+      <div class="home-feature-card">
+        <img class="feature-illo" src="{{ url_for('static', filename='img/3_price.png') }}" alt="料金はその場で表示">
+        <strong>料金はその場で表示</strong>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

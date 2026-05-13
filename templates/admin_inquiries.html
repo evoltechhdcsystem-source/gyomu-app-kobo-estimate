@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}問合せ一覧{% endblock %}
+{% block content %}
+<section class="container py-4 py-lg-5">
+  <div class="admin-head">
+    <div>
+      <h1>問合せ一覧</h1>
+      <p>受付内容とステータスを確認できます。</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">管理TOP</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>ID</th><th>会社名</th><th>担当者</th><th>メール</th><th>金額</th><th>ステータス</th><th>日時</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inquiry in inquiries %}
+          <tr>
+            <td><a href="{{ url_for('admin.inquiry_detail', inquiry_id=inquiry.id) }}">#{{ inquiry.id }}</a></td>
+            <td>{{ inquiry.company_name }}</td>
+            <td>{{ inquiry.person_name }}</td>
+            <td>{{ inquiry.email }}</td>
+            <td>{{ "{:,}".format(inquiry.estimate.total_price) }}円</td>
+            <td><span class="badge text-bg-light">{{ inquiry.status }}</span></td>
+            <td>{{ inquiry.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-secondary py-5">問合せはまだありません。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+

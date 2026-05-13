@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}問合せ詳細{% endblock %}
+{% block content %}
+<section class="container py-4 py-lg-5">
+  <div class="admin-head">
+    <div>
+      <h1>問合せ詳細 #{{ inquiry.id }}</h1>
+      <p>{{ inquiry.company_name }} / {{ inquiry.person_name }}</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.inquiries') }}">一覧へ戻る</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="form-section">
+        <h2>顧客情報</h2>
+        <dl class="detail-list">
+          <dt>会社名</dt><dd>{{ inquiry.company_name }}</dd>
+          <dt>担当者名</dt><dd>{{ inquiry.person_name }}</dd>
+          <dt>メール</dt><dd>{{ inquiry.email }}</dd>
+          <dt>電話番号</dt><dd>{{ inquiry.phone or "-" }}</dd>
+          <dt>問合せ内容</dt><dd>{{ inquiry.message or "-" }}</dd>
+        </dl>
+        <form method="post" class="d-flex gap-2 align-items-end mt-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="flex-grow-1">
+            <label class="form-label">ステータス</label>
+            <select class="form-select" name="status">
+              {% for status in ["未対応", "対応中", "対応済み"] %}
+                <option value="{{ status }}" {% if inquiry.status == status %}selected{% endif %}>{{ status }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button class="btn btn-primary">更新</button>
+        </form>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="summary-panel mb-4">
+        <div class="small text-secondary">見積金額</div>
+        <div class="estimate-total">{{ "{:,}".format(inquiry.estimate.total_price) }}円</div>
+        <ul class="list-group list-group-flush mt-3">
+          {% for item in inquiry.estimate.items %}
+            <li class="list-group-item d-flex justify-content-between px-0">
+              <span>{{ item.item_name }}</span>
+              <strong>{{ "{:,}".format(item.price) }}円</strong>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="form-section">
+        <h2>添付ファイル</h2>
+        {% for attachment in inquiry.attachments %}
+          <div class="attachment-row">
+            <span>{{ attachment.file_name }}</span>
+            <small>{{ attachment.box_url }}</small>
+          </div>
+        {% else %}
+          <p class="text-secondary mb-0">添付ファイルはありません。</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
