@@ -17,9 +17,11 @@ csrf = CSRFProtect()
 def _database_uri(instance_dir: Path) -> str:
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        # Some providers expose postgres://, while SQLAlchemy expects postgresql://.
+        # Use psycopg v3 for Render/Neon compatibility, including newer Python runtimes.
         if database_url.startswith("postgres://"):
-            return database_url.replace("postgres://", "postgresql://", 1)
+            return database_url.replace("postgres://", "postgresql+psycopg://", 1)
+        if database_url.startswith("postgresql://"):
+            return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
         return database_url
     return f"sqlite:///{instance_dir / 'estimate_app.db'}"
 

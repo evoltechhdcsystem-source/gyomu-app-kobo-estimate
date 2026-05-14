@@ -19,7 +19,7 @@ Build Command:
 pip install -r requirements.txt
 
 Start Command:
-gunicorn app:app
+gunicorn --bind 0.0.0.0:$PORT app:app
 ```
 
 ## 環境変数
