@@ -14,6 +14,16 @@ from routes.main import main_bp
 csrf = CSRFProtect()
 
 
+def _database_uri(instance_dir: Path) -> str:
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        # Some providers expose postgres://, while SQLAlchemy expects postgresql://.
+        if database_url.startswith("postgres://"):
+            return database_url.replace("postgres://", "postgresql://", 1)
+        return database_url
+    return f"sqlite:///{instance_dir / 'estimate_app.db'}"
+
+
 def create_app() -> Flask:
     load_dotenv()
 
@@ -26,9 +36,7 @@ def create_app() -> Flask:
 
     app.config.update(
         SECRET_KEY=os.getenv("SECRET_KEY", "dev-secret-change-me"),
-        SQLALCHEMY_DATABASE_URI=os.getenv(
-            "DATABASE_URL", f"sqlite:///{instance_dir / 'estimate_app.db'}"
-        ),
+        SQLALCHEMY_DATABASE_URI=_database_uri(instance_dir),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         MAX_CONTENT_LENGTH=20 * 1024 * 1024,
         UPLOAD_FOLDER=str(upload_dir),
