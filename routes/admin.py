@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+from datetime import UTC, datetime, timedelta, timezone
 
 from flask import (
     Blueprint,
@@ -18,10 +19,19 @@ from flask import (
 from models import Inquiry, db
 
 admin_bp = Blueprint("admin", __name__)
+JST = timezone(timedelta(hours=9), "JST")
 
 
 def admin_required():
     return session.get("admin_logged_in") is True
+
+
+def format_jst(value: datetime | None) -> str:
+    if value is None:
+        return ""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(JST).strftime("%Y-%m-%d %H:%M")
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
@@ -63,7 +73,7 @@ def inquiries():
     if not admin_required():
         return redirect(url_for("admin.login"))
     rows = Inquiry.query.order_by(Inquiry.created_at.desc()).all()
-    return render_template("admin_inquiries.html", inquiries=rows)
+    return render_template("admin_inquiries.html", inquiries=rows, format_jst=format_jst)
 
 
 @admin_bp.route("/inquiries/<int:inquiry_id>", methods=["GET", "POST"])
@@ -96,7 +106,7 @@ def export_csv():
                 inquiry.phone or "",
                 inquiry.status,
                 inquiry.estimate.total_price,
-                inquiry.created_at.strftime("%Y-%m-%d %H:%M"),
+                format_jst(inquiry.created_at),
             ]
         )
 
@@ -105,4 +115,3 @@ def export_csv():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=inquiries.csv"},
     )
-

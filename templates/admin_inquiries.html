@@ -25,7 +25,7 @@
             <td>{{ inquiry.email }}</td>
             <td>{{ "{:,}".format(inquiry.estimate.total_price) }}円</td>
             <td><span class="badge text-bg-light">{{ inquiry.status }}</span></td>
-            <td>{{ inquiry.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td>{{ format_jst(inquiry.created_at) }}</td>
           </tr>
         {% else %}
           <tr><td colspan="7" class="text-center text-secondary py-5">問合せはまだありません。</td></tr>
@@ -35,4 +35,3 @@
   </div>
 </section>
 {% endblock %}
-
