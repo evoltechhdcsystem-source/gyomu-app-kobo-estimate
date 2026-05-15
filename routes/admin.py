@@ -90,11 +90,19 @@ def inquiry_detail(inquiry_id: int):
     if not admin_required():
         return redirect(url_for("admin.login"))
     inquiry = Inquiry.query.get_or_404(inquiry_id)
+    back_to = request.args.get("from")
+    back_url = url_for("admin.estimates") if back_to == "estimates" else url_for("admin.inquiries")
+    back_label = "見積履歴一覧へ戻る" if back_to == "estimates" else "一覧へ戻る"
     if request.method == "POST":
         inquiry.status = request.form.get("status", inquiry.status)
         db.session.commit()
         flash("ステータスを更新しました。", "success")
-    return render_template("admin_inquiry_detail.html", inquiry=inquiry)
+    return render_template(
+        "admin_inquiry_detail.html",
+        inquiry=inquiry,
+        back_url=back_url,
+        back_label=back_label,
+    )
 
 
 @admin_bp.get("/inquiries.csv")

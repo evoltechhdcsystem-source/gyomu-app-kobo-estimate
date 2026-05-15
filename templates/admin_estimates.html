@@ -16,6 +16,7 @@
           <th>ID</th>
           <th>デバイス</th>
           <th>パック</th>
+          <th>見積内容</th>
           <th class="text-end">金額</th>
           <th>問合せ</th>
           <th>日時</th>
@@ -27,10 +28,23 @@
             <td>#{{ estimate.id }}</td>
             <td>{{ estimate.device_type }}</td>
             <td>{{ estimate.package_type }}</td>
+            <td>
+              <details class="estimate-items-detail" {% if estimate.package_type == "カスタムパック" %}open{% endif %}>
+                <summary>{{ estimate.items|length }}項目</summary>
+                <ul>
+                  {% for item in estimate.items %}
+                    <li>
+                      <span>{{ item.item_name }}</span>
+                      <strong>{{ "{:,}".format(item.price) }}円</strong>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </details>
+            </td>
             <td class="text-end">{{ "{:,}".format(estimate.total_price) }}円</td>
             <td>
               {% if estimate.inquiry %}
-                <a href="{{ url_for('admin.inquiry_detail', inquiry_id=estimate.inquiry.id) }}">#{{ estimate.inquiry.id }}</a>
+                <a href="{{ url_for('admin.inquiry_detail', inquiry_id=estimate.inquiry.id, **{'from': 'estimates'}) }}">#{{ estimate.inquiry.id }}</a>
               {% else %}
                 <span class="text-secondary">なし</span>
               {% endif %}
@@ -38,7 +52,7 @@
             <td>{{ format_jst(estimate.created_at) }}</td>
           </tr>
         {% else %}
-          <tr><td colspan="6" class="text-center text-secondary py-5">見積履歴はまだありません。</td></tr>
+          <tr><td colspan="7" class="text-center text-secondary py-5">見積履歴はまだありません。</td></tr>
         {% endfor %}
       </tbody>
     </table>

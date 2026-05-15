@@ -7,7 +7,7 @@
       <h1>問合せ詳細 #{{ inquiry.id }}</h1>
       <p>{{ inquiry.company_name }} / {{ inquiry.person_name }}</p>
     </div>
-    <a class="btn btn-outline-secondary" href="{{ url_for('admin.inquiries') }}">一覧へ戻る</a>
+    <a class="btn btn-outline-secondary" href="{{ back_url }}">{{ back_label }}</a>
   </div>
 
   <div class="row g-4">
