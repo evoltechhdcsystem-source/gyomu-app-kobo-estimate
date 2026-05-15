@@ -34,6 +34,12 @@ def format_jst(value: datetime | None) -> str:
     return value.astimezone(JST).strftime("%Y-%m-%d %H:%M")
 
 
+def estimate_item_label(item_name: str) -> str:
+    if " 画面単価 x " in item_name:
+        return item_name.rsplit(" x ", 1)[-1]
+    return item_name
+
+
 @admin_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
@@ -74,7 +80,12 @@ def estimates():
     if not admin_required():
         return redirect(url_for("admin.login"))
     rows = Estimate.query.order_by(Estimate.created_at.desc()).all()
-    return render_template("admin_estimates.html", estimates=rows, format_jst=format_jst)
+    return render_template(
+        "admin_estimates.html",
+        estimates=rows,
+        format_jst=format_jst,
+        estimate_item_label=estimate_item_label,
+    )
 
 
 @admin_bp.get("/inquiries")
