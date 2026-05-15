@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}見積履歴一覧{% endblock %}
+{% block content %}
+<section class="container py-4 py-lg-5">
+  <div class="admin-head">
+    <div>
+      <h1>見積履歴一覧</h1>
+      <p>見積結果画面まで進んだ履歴を確認できます。</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">管理TOP</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>デバイス</th>
+          <th>パック</th>
+          <th class="text-end">金額</th>
+          <th>問合せ</th>
+          <th>日時</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for estimate in estimates %}
+          <tr>
+            <td>#{{ estimate.id }}</td>
+            <td>{{ estimate.device_type }}</td>
+            <td>{{ estimate.package_type }}</td>
+            <td class="text-end">{{ "{:,}".format(estimate.total_price) }}円</td>
+            <td>
+              {% if estimate.inquiry %}
+                <a href="{{ url_for('admin.inquiry_detail', inquiry_id=estimate.inquiry.id) }}">#{{ estimate.inquiry.id }}</a>
+              {% else %}
+                <span class="text-secondary">なし</span>
+              {% endif %}
+            </td>
+            <td>{{ format_jst(estimate.created_at) }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="text-center text-secondary py-5">見積履歴はまだありません。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

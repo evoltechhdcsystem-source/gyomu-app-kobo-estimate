@@ -46,34 +46,37 @@ def _estimate_flow_total(flow: dict | None, default_custom_screens: int = 0) -> 
 
 
 def _estimate_status(active_step: str, flow: dict | None = None, estimate: Estimate | None = None):
-    package_label = "パック選択"
-    if flow and flow.get("package_type"):
-        package_label = flow["package_type"]
-    elif estimate:
-        package_label = estimate.package_type
+    package_type = estimate.package_type if estimate else None
+    if not package_type and flow:
+        package_type = flow.get("package_type")
+    uses_custom = package_type == "カスタムパック"
 
-    steps = [
-        {"key": "device", "label": "デバイス選択"},
-        {"key": "package", "label": package_label},
-        {"key": "custom", "label": "機能追加"},
-        {"key": "result", "label": "見積もり結果"},
-        {"key": "inquiry", "label": "問い合わせ"},
-    ]
+    steps = [{"key": "device", "label": "デバイス選択"}]
+    if active_step in {"package", "custom", "result", "inquiry"}:
+        steps.append({"key": "package", "label": "パック選択"})
+    if uses_custom and active_step in {"custom", "result", "inquiry"}:
+        steps.append({"key": "custom", "label": "機能追加"})
+    if active_step in {"result", "inquiry"}:
+        steps.append({"key": "result", "label": "見積もり結果"})
+    if active_step == "inquiry":
+        steps.append({"key": "inquiry", "label": "問い合わせ"})
+
     current_index = next(
         (index for index, step in enumerate(steps) if step["key"] == active_step),
-        0,
+        len(steps) - 1,
     )
     for index, step in enumerate(steps):
-        step["state"] = "active" if index == current_index else "done" if index < current_index else "upcoming"
+        step["state"] = "active" if index == current_index else "done"
 
     if current_index > 0:
         steps[0]["href"] = url_for("main.device_select")
     if current_index > 1:
         steps[1]["href"] = url_for("main.package_select")
-    if current_index > 2 and package_label == "カスタムパック":
+    if uses_custom and current_index > 2:
         steps[2]["href"] = url_for("main.custom_estimate")
-    if current_index > 3 and estimate:
-        steps[3]["href"] = url_for("main.estimate_result", estimate_id=estimate.id)
+    result_index = next((index for index, step in enumerate(steps) if step["key"] == "result"), None)
+    if result_index is not None and current_index > result_index and estimate:
+        steps[result_index]["href"] = url_for("main.estimate_result", estimate_id=estimate.id)
 
     total_price = estimate.total_price if estimate else _estimate_flow_total(flow, 1 if active_step == "custom" else 0)
     return {"steps": steps, "total_price": total_price}

@@ -16,7 +16,7 @@ from flask import (
     url_for,
 )
 
-from models import Inquiry, db
+from models import Estimate, Inquiry, db
 
 admin_bp = Blueprint("admin", __name__)
 JST = timezone(timedelta(hours=9), "JST")
@@ -64,8 +64,17 @@ def dashboard():
         "total": Inquiry.query.count(),
         "open": Inquiry.query.filter_by(status="未対応").count(),
         "done": Inquiry.query.filter_by(status="対応済み").count(),
+        "estimates": Estimate.query.count(),
     }
     return render_template("admin_dashboard.html", counts=counts)
+
+
+@admin_bp.get("/estimates")
+def estimates():
+    if not admin_required():
+        return redirect(url_for("admin.login"))
+    rows = Estimate.query.order_by(Estimate.created_at.desc()).all()
+    return render_template("admin_estimates.html", estimates=rows, format_jst=format_jst)
 
 
 @admin_bp.get("/inquiries")

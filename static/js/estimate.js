@@ -4,6 +4,15 @@ function setCurrentTotal(total) {
   document.querySelectorAll("[data-current-total]").forEach((element) => {
     element.textContent = `${estimateFormatter.format(total)}円`;
   });
+  document.querySelectorAll("[data-estimate-total]").forEach((element) => {
+    element.textContent = `${estimateFormatter.format(total)}円`;
+  });
+}
+
+function setFeatureTotal(total) {
+  document.querySelectorAll("[data-feature-total]").forEach((element) => {
+    element.textContent = `${estimateFormatter.format(total)}円`;
+  });
 }
 
 function bindPackageEstimate() {
@@ -39,6 +48,7 @@ function bindCustomEstimate() {
     const featureTotal = Array.from(form.querySelectorAll('input[name="features"]:checked'))
       .reduce((sum, item) => sum + Number(item.dataset.price || 0), 0);
 
+    setFeatureTotal(featureTotal);
     setCurrentTotal((unitPrice * screens) + featureTotal);
   }
 

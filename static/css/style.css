@@ -388,10 +388,6 @@ body {
 }
 
 .estimate-status {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: center;
   margin-bottom: 24px;
   padding: 16px;
   background: #fff;
@@ -443,31 +439,44 @@ a.progress-step:hover {
   color: var(--brand-dark);
 }
 
-.current-total {
+.flow-line {
   display: grid;
-  justify-items: end;
-  gap: 2px;
-  padding-left: 16px;
-  border-left: 1px solid var(--line);
-  white-space: nowrap;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.current-total span {
+.custom-price-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 8px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, .96);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 -10px 24px rgba(31, 41, 51, .08);
+  backdrop-filter: blur(10px);
+}
+
+.custom-price-bar div {
+  display: grid;
+  gap: 2px;
+  min-width: 160px;
+}
+
+.custom-price-bar span {
   color: var(--muted);
   font-size: .78rem;
   font-weight: 800;
 }
 
-.current-total strong {
+.custom-price-bar strong {
   color: var(--brand);
   font-size: 1.35rem;
   line-height: 1.1;
-}
-
-.flow-line {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
 }
 
 .flow-line span {
@@ -632,11 +641,11 @@ a.progress-step:hover {
     order: 2;
   }
 
-  .current-total {
-    justify-items: start;
-    padding-left: 0;
-    padding-top: 12px;
-    border-left: 0;
-    border-top: 1px solid var(--line);
+  .custom-price-bar {
+    flex-direction: column;
+  }
+
+  .custom-price-bar div {
+    min-width: 0;
   }
 }
