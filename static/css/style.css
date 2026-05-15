@@ -591,21 +591,8 @@ a.progress-step:hover {
 }
 
 .estimate-items-detail li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
   color: var(--muted);
   font-size: .88rem;
-}
-
-.estimate-items-detail li span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.estimate-items-detail li strong {
-  color: var(--ink);
-  white-space: nowrap;
 }
 
 @media (max-width: 900px) {

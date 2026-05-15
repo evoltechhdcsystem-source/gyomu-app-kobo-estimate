@@ -29,17 +29,18 @@
             <td>{{ estimate.device_type }}</td>
             <td>{{ estimate.package_type }}</td>
             <td>
-              <details class="estimate-items-detail" {% if estimate.package_type == "カスタムパック" %}open{% endif %}>
-                <summary>{{ estimate.items|length }}項目</summary>
-                <ul>
-                  {% for item in estimate.items %}
-                    <li>
-                      <span>{{ item.item_name }}</span>
-                      <strong>{{ "{:,}".format(item.price) }}円</strong>
-                    </li>
-                  {% endfor %}
-                </ul>
-              </details>
+              {% if estimate.package_type == "カスタムパック" and estimate.items|length > 1 %}
+                <details class="estimate-items-detail">
+                  <summary>{{ estimate.items[0].item_name }}</summary>
+                  <ul>
+                    {% for item in estimate.items[1:] %}
+                      <li>{{ item.item_name }}</li>
+                    {% endfor %}
+                  </ul>
+                </details>
+              {% else %}
+                <span class="text-secondary">-</span>
+              {% endif %}
             </td>
             <td class="text-end">{{ "{:,}".format(estimate.total_price) }}円</td>
             <td>
