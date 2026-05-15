@@ -11,9 +11,13 @@
   <nav class="navbar navbar-expand-lg app-nav sticky-top">
     <div class="container">
       <a class="navbar-brand brand-logo" href="{{ url_for('main.index') }}">
-        <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+        <img src="{{ url_for('static', filename='img/gyomu-app-kobo-estimate.png') }}" alt="業務アプリ工房 見積もり" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
         <span>業務アプリ工房</span>
       </a>
+      <div class="service-site-link" aria-label="サービスサイト">
+        <span>サービスサイト</span>
+        <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房 サービスサイト">
+      </div>
     </div>
   </nav>
 
