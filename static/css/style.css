@@ -324,6 +324,16 @@ body {
   border-radius: 8px;
 }
 
+.package-choice-visual {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 7 / 4;
+  justify-self: center;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
 .choice-card input {
   inline-size: 18px;
   block-size: 18px;

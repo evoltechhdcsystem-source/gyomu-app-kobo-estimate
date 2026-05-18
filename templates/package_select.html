@@ -17,18 +17,21 @@
     <div class="choice-grid three">
       <label class="choice-card package-card">
         <input type="radio" name="package_type" value="基本パック" data-screens="3" required>
+        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-basic.svg') }}" alt="基本パックのイメージ">
         <span class="choice-title">基本パック</span>
         <span class="choice-price">3画面</span>
         <small>まず小さく始めたい方向け。</small>
       </label>
       <label class="choice-card package-card">
         <input type="radio" name="package_type" value="運用パック" data-screens="6" required>
+        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-extended.svg') }}" alt="拡張パックのイメージ">
         <span class="choice-title">運用パック</span>
         <span class="choice-price">6画面</span>
         <small>実運用に必要な画面をまとめたい方向け。</small>
       </label>
       <label class="choice-card package-card">
         <input type="radio" name="package_type" value="カスタムパック" data-screens="1" required>
+        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-custom.svg') }}" alt="カスタムパックのイメージ">
         <span class="choice-title">カスタムパック</span>
         <span class="choice-price">画面数・機能を指定</span>
         <small>必要機能を自由に組み合わせたい方向け。</small>
