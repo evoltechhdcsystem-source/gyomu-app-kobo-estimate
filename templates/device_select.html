@@ -18,6 +18,11 @@
       {% for name, price in device_prices.items() %}
         <label class="choice-card">
           <input type="radio" name="device_type" value="{{ name }}" required>
+          {% if name == "レスポンシブ" %}
+            <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-responsive.svg') }}" alt="スマホ・タブレット・PCの画面サイズに対応">
+          {% else %}
+            <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-mobile-pc.svg') }}" alt="スマホまたはPC向け">
+          {% endif %}
           <span class="choice-title">{{ name }}</span>
           <span class="choice-price">{{ "{:,}".format(price) }}円 / 画面</span>
         </label>
