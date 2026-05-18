@@ -28,7 +28,10 @@
         {% for name, price in feature_prices.items() %}
           <label class="feature-row">
             <input class="form-check-input" type="checkbox" name="features" value="{{ name }}" data-price="{{ price }}" {% if name in flow.features|default([]) %}checked{% endif %}>
-            <span>{{ name }}</span>
+            <span class="feature-copy">
+              <strong class="feature-name">{{ name }}</strong>
+              <small><span class="help-icon" aria-hidden="true">?</span>{{ feature_descriptions.get(name, "この機能を追加できます。") }}</small>
+            </span>
             <strong>{{ "{:,}".format(price) }}円{% if name == "決済機能" %}〜{% endif %}</strong>
           </label>
         {% endfor %}

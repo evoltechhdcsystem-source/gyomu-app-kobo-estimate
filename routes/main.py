@@ -22,6 +22,20 @@ from services.estimate_service import (
 from services.mail_service import send_inquiry_mails
 
 main_bp = Blueprint("main", __name__)
+FEATURE_DESCRIPTIONS = {
+    "データ登録": "新しい情報を入力フォームから追加できます。",
+    "データ編集": "登録済みの情報をあとから修正できます。",
+    "データ検索": "条件を指定して必要な情報を探せます。",
+    "データ削除": "不要な情報を削除できます。",
+    "メール送信": "通知や受付内容をメールで送信できます。",
+    "マスターテーブル": "商品・顧客・分類などの基本データを管理できます。",
+    "kintone連携": "kintoneとデータを連携できます。",
+    "決済機能": "クレジットカード等の支払い機能を追加できます。",
+    "AI API連携": "AIによる文章作成・要約・判定などを追加できます。",
+    "ストア申請代行": "アプリ公開に必要な申請作業を代行します。",
+    "操作マニュアル": "利用者向けの操作説明書を作成します。",
+    "ユーザーログイン": "利用者ごとにログインして使えるようにします。",
+}
 
 
 def _as_int(value, default: int = 0) -> int:
@@ -182,6 +196,7 @@ def custom_estimate():
         return render_template(
             "custom_estimate.html",
             feature_prices=FEATURE_PRICES,
+            feature_descriptions=FEATURE_DESCRIPTIONS,
             device_prices=DEVICE_PRICES,
             flow=flow,
             estimate_status=_estimate_status("custom", flow),
@@ -193,6 +208,7 @@ def custom_estimate():
         return render_template(
             "custom_estimate.html",
             feature_prices=FEATURE_PRICES,
+            feature_descriptions=FEATURE_DESCRIPTIONS,
             device_prices=DEVICE_PRICES,
             flow=flow,
             estimate_status=_estimate_status("custom", flow),

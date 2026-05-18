@@ -358,7 +358,42 @@ body {
   display: grid;
   grid-template-columns: 24px 1fr auto;
   gap: 10px;
-  align-items: center;
+  align-items: start;
+}
+
+.feature-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.feature-name {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.feature-copy small {
+  display: flex;
+  align-items: start;
+  gap: 6px;
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.45;
+}
+
+.help-icon {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 900;
+  line-height: 1;
+  background: var(--brand);
+  border-radius: 50%;
 }
 
 .custom-screens {
