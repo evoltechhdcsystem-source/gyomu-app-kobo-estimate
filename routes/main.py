@@ -36,6 +36,20 @@ FEATURE_DESCRIPTIONS = {
     "操作マニュアル": "利用者向けの操作説明書を作成します。",
     "ユーザーログイン": "利用者ごとにログインして使えるようにします。",
 }
+FEATURE_ICON_TYPES = {
+    "データ登録": "add",
+    "データ編集": "edit",
+    "データ検索": "search",
+    "データ削除": "delete",
+    "メール送信": "mail",
+    "マスターテーブル": "table",
+    "kintone連携": "link",
+    "決済機能": "payment",
+    "AI API連携": "ai",
+    "ストア申請代行": "store",
+    "操作マニュアル": "manual",
+    "ユーザーログイン": "login",
+}
 
 
 def _as_int(value, default: int = 0) -> int:
@@ -124,6 +138,11 @@ def _save_estimate_and_redirect(flow: dict):
     return redirect(url_for("main.estimate_result", estimate_id=estimate.id))
 
 
+def _current_or_estimate_device(estimate: Estimate) -> str:
+    flow = session.get("estimate_flow") or {}
+    return flow.get("device_type") or estimate.device_type
+
+
 @main_bp.get("/")
 def index():
     return render_template("index.html")
@@ -197,6 +216,7 @@ def custom_estimate():
             "custom_estimate.html",
             feature_prices=FEATURE_PRICES,
             feature_descriptions=FEATURE_DESCRIPTIONS,
+            feature_icon_types=FEATURE_ICON_TYPES,
             device_prices=DEVICE_PRICES,
             flow=flow,
             estimate_status=_estimate_status("custom", flow),
@@ -209,6 +229,7 @@ def custom_estimate():
             "custom_estimate.html",
             feature_prices=FEATURE_PRICES,
             feature_descriptions=FEATURE_DESCRIPTIONS,
+            feature_icon_types=FEATURE_ICON_TYPES,
             device_prices=DEVICE_PRICES,
             flow=flow,
             estimate_status=_estimate_status("custom", flow),
@@ -236,6 +257,16 @@ def estimate_result(estimate_id: int):
         estimate_status=_estimate_status("result", flow, estimate),
         back_url=url_for(back_endpoint),
     )
+
+
+@main_bp.post("/estimate/<int:estimate_id>/custom")
+def start_custom_from_estimate(estimate_id: int):
+    estimate = Estimate.query.get_or_404(estimate_id)
+    session["estimate_flow"] = {
+        "device_type": _current_or_estimate_device(estimate),
+        "package_type": "カスタムパック",
+    }
+    return redirect(url_for("main.custom_estimate"))
 
 
 @main_bp.route("/inquiry/<int:estimate_id>", methods=["GET", "POST"])

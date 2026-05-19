@@ -37,6 +37,23 @@
           <dt class="col-5">デバイス</dt><dd class="col-7">{{ estimate.device_type }}</dd>
           <dt class="col-5">パック</dt><dd class="col-7">{{ estimate.package_type }}</dd>
         </dl>
+        <div class="license-note">
+          <div class="small text-secondary">開発ツールライセンス</div>
+          <strong>ノーコードツール「Click」</strong>
+          <span>Proプランライセンス料</span>
+          <span>月額 ￥19,600</span>
+          <a href="https://click.dev/" target="_blank" rel="noopener">https://click.dev/</a>
+          <small>※合計金額には加算していません。</small>
+        </div>
+        {% if estimate.package_type != "カスタムパック" %}
+          <div class="custom-estimate-cta">
+            <p>画面数や機能選択しての見積もりは</p>
+            <form method="post" action="{{ url_for('main.start_custom_from_estimate', estimate_id=estimate.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline-dark w-100" type="submit">カスタムパック見積もりへ</button>
+            </form>
+          </div>
+        {% endif %}
         <div class="d-grid gap-2">
           <a class="btn btn-outline-dark" href="{{ back_url }}">戻る</a>
           <a class="btn btn-primary" href="{{ url_for('main.inquiry', estimate_id=estimate.id) }}">問い合わせへ進む</a>
