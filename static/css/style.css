@@ -49,7 +49,6 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto;
   padding: 6px 10px;
   background: #fff;
   border: 1px solid var(--line);
@@ -70,8 +69,15 @@ body {
   object-fit: contain;
 }
 
-.mobile-service-bar {
-  display: none;
+.app-footer {
+  padding: 28px 0;
+  background: #fff;
+  border-top: 1px solid var(--line);
+}
+
+.app-footer .container {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .hero-band {
@@ -376,186 +382,11 @@ body {
 }
 
 .feature-point-icon {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
+  display: block;
   width: 34px;
   height: 34px;
-  background: var(--brand-soft);
-  border: 1px solid rgba(255, 107, 0, .28);
+  object-fit: contain;
   border-radius: 8px;
-}
-
-.feature-point-icon::before,
-.feature-point-icon::after {
-  content: "";
-  position: absolute;
-  display: block;
-}
-
-.feature-point-icon::before {
-  width: 16px;
-  height: 16px;
-  border: 3px solid var(--brand);
-  border-radius: 4px;
-}
-
-.icon-add::after,
-.icon-login::after {
-  width: 12px;
-  height: 3px;
-  background: #111;
-  box-shadow: 0 0 0 #111;
-}
-
-.icon-add::before,
-.icon-login::before {
-  border-radius: 50%;
-}
-
-.icon-add::after {
-  transform: rotate(90deg);
-}
-
-.icon-edit::before {
-  width: 18px;
-  height: 5px;
-  border: 0;
-  background: var(--brand);
-  border-radius: 99px;
-  transform: rotate(-35deg);
-}
-
-.icon-edit::after {
-  width: 7px;
-  height: 7px;
-  right: 7px;
-  bottom: 8px;
-  background: #111;
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
-  transform: rotate(-35deg);
-}
-
-.icon-search::before {
-  border-radius: 50%;
-}
-
-.icon-search::after {
-  width: 11px;
-  height: 3px;
-  right: 7px;
-  bottom: 8px;
-  background: #111;
-  border-radius: 99px;
-  transform: rotate(45deg);
-}
-
-.icon-delete::before {
-  width: 16px;
-  height: 18px;
-  border-radius: 3px;
-}
-
-.icon-delete::after {
-  top: 8px;
-  width: 20px;
-  height: 3px;
-  background: #111;
-  border-radius: 99px;
-}
-
-.icon-mail::before {
-  width: 20px;
-  height: 14px;
-}
-
-.icon-mail::after {
-  width: 14px;
-  height: 14px;
-  border-right: 3px solid #111;
-  border-bottom: 3px solid #111;
-  transform: rotate(45deg);
-  top: 8px;
-}
-
-.icon-table::before {
-  width: 20px;
-  height: 18px;
-}
-
-.icon-table::after {
-  width: 20px;
-  height: 3px;
-  background: #111;
-  box-shadow: 0 6px 0 #111;
-}
-
-.icon-link::before {
-  width: 17px;
-  height: 10px;
-  border-radius: 999px;
-  transform: translateX(-4px) rotate(-25deg);
-}
-
-.icon-link::after {
-  width: 17px;
-  height: 10px;
-  border: 3px solid #111;
-  border-radius: 999px;
-  transform: translateX(4px) rotate(-25deg);
-}
-
-.icon-payment::before {
-  width: 22px;
-  height: 15px;
-}
-
-.icon-payment::after {
-  width: 20px;
-  height: 4px;
-  top: 12px;
-  background: #111;
-}
-
-.icon-ai::before {
-  border-radius: 50%;
-}
-
-.icon-ai::after {
-  width: 4px;
-  height: 4px;
-  background: #111;
-  border-radius: 50%;
-  box-shadow: -7px 0 0 #111, 7px 0 0 #111;
-}
-
-.icon-store::before {
-  width: 20px;
-  height: 15px;
-  border-radius: 3px;
-  transform: translateY(3px);
-}
-
-.icon-store::after {
-  top: 8px;
-  width: 22px;
-  height: 9px;
-  border: 3px solid #111;
-  border-bottom: 0;
-  border-radius: 12px 12px 0 0;
-}
-
-.icon-manual::before {
-  width: 18px;
-  height: 22px;
-  border-radius: 3px;
-}
-
-.icon-manual::after {
-  width: 10px;
-  height: 3px;
-  background: #111;
-  box-shadow: 0 6px 0 #111;
 }
 
 .feature-copy {
@@ -585,11 +416,12 @@ body {
   width: 18px;
   height: 18px;
   margin-top: 1px;
-  color: #fff;
+  color: var(--muted);
   font-size: .72rem;
   font-weight: 900;
   line-height: 1;
-  background: var(--brand);
+  background: transparent;
+  border: 1px solid currentColor;
   border-radius: 50%;
 }
 
@@ -908,19 +740,8 @@ a.progress-step:hover {
 }
 
 @media (max-width: 900px) {
-  body {
-    padding-bottom: 82px;
-  }
-
-  .service-site-link {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    z-index: 20;
+  .app-footer .container {
     justify-content: center;
-    margin-left: 0;
-    box-shadow: 0 12px 28px rgba(31, 41, 51, .14);
   }
 
   .service-site-link img {

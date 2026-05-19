@@ -28,7 +28,7 @@
         {% for name, price in feature_prices.items() %}
           <label class="feature-row">
             <input class="form-check-input" type="checkbox" name="features" value="{{ name }}" data-price="{{ price }}" {% if name in flow.features|default([]) %}checked{% endif %}>
-            <span class="feature-point-icon icon-{{ feature_icon_types.get(name, 'default') }}" aria-hidden="true"></span>
+            <img class="feature-point-icon" src="{{ url_for('static', filename='img/' ~ feature_icon_files.get(name, 'feature-add.svg')) }}" alt="">
             <span class="feature-copy">
               <strong class="feature-name">{{ name }}</strong>
               <small><span class="help-icon" aria-hidden="true">?</span>{{ feature_descriptions.get(name, "この機能を追加できます。") }}</small>

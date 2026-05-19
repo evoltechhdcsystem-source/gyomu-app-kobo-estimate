@@ -14,10 +14,6 @@
         <img src="{{ url_for('static', filename='img/gyomu-app-kobo-estimate.png') }}" alt="業務アプリ工房 見積もり" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
         <span>業務アプリ工房</span>
       </a>
-      <div class="service-site-link" aria-label="サービスサイト">
-        <span>サービスサイト</span>
-        <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房 サービスサイト">
-      </div>
     </div>
   </nav>
 
@@ -33,6 +29,15 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+
+  <footer class="app-footer">
+    <div class="container">
+      <div class="service-site-link" aria-label="サービスサイト">
+        <span>サービスサイト</span>
+        <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房 サービスサイト">
+      </div>
+    </div>
+  </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   {% block scripts %}{% endblock %}
