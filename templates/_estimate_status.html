@@ -1,12 +1,19 @@
 {% if estimate_status %}
-  <div class="estimate-status" aria-label="見積もりの進行状況">
-    <div class="progress-trail">
+  <div class="estimate-status" aria-label="見積りの進行状況">
+    <div class="estimate-status-head">
+      <span>見積りステップ</span>
+    </div>
+    <div class="progress-trail" style="--step-count: {{ estimate_status.steps|length }}">
       {% for step in estimate_status.steps %}
         {% if step.href and step.state == "done" %}
-          <a class="progress-step is-{{ step.state }}" href="{{ step.href }}">{{ step.label }}</a>
+          <a class="progress-step is-{{ step.state }}" href="{{ step.href }}">
+            <span class="progress-step-number">{{ loop.index0 }}</span>
+            <span class="progress-step-label">{{ step.label }}</span>
+          </a>
         {% else %}
           <span class="progress-step is-{{ step.state }}">
-            {% if step.state == "active" %}[{{ step.label }}]{% else %}{{ step.label }}{% endif %}
+            <span class="progress-step-number">{{ loop.index0 }}</span>
+            <span class="progress-step-label">{{ step.label }}</span>
           </span>
         {% endif %}
       {% endfor %}

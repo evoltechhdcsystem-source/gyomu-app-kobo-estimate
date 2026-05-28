@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}見積履歴一覧{% endblock %}
+{% block title %}見積り履歴一覧{% endblock %}
 {% block content %}
 <section class="container py-4 py-lg-5">
   <div class="admin-head">
     <div>
-      <h1>見積履歴一覧</h1>
-      <p>見積結果画面まで進んだ履歴を確認できます。</p>
+      <h1>見積り履歴一覧</h1>
+      <p>見積り結果画面まで進んだ履歴を確認できます。</p>
     </div>
     <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">管理TOP</a>
   </div>
@@ -54,7 +54,7 @@
             <td>{{ format_jst(estimate.created_at) }}</td>
           </tr>
         {% else %}
-          <tr><td colspan="6" class="text-center text-secondary py-5">見積履歴はまだありません。</td></tr>
+          <tr><td colspan="6" class="text-center text-secondary py-5">見積り履歴はまだありません。</td></tr>
         {% endfor %}
       </tbody>
     </table>

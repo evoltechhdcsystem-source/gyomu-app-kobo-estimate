@@ -1,65 +1,288 @@
 {% extends "base.html" %}
-{% block title %}見積結果{% endblock %}
+{% block title %}見積り結果{% endblock %}
 {% block content %}
 <section class="container py-4 py-lg-5">
-  {% include "_estimate_status.html" %}
+  <section class="print-estimate-sheet" aria-label="PDF出力用の見積り書">
+    <div class="print-estimate-head">
+      <div>
+        <img class="print-estimate-logo" src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房">
+        <h1>概算見積り書</h1>
+      </div>
+      <div class="print-estimate-total">
+        <span>合計</span>
+        <strong>{{ "{:,}".format(estimate.total_price) }}円</strong>
+      </div>
+    </div>
+
+    <div class="print-estimate-meta">
+      <div>
+        <span>利用端末</span>
+        <strong>{{ estimate.device_type }}</strong>
+      </div>
+      <div>
+        <span>パック</span>
+        <strong>{{ estimate.package_type }}</strong>
+      </div>
+    </div>
+
+    <div class="print-estimate-block">
+      <h2>画面・機能の内容</h2>
+      <table class="print-estimate-table{% if estimate.package_type == "カスタムパック" %} has-price{% endif %}">
+        <thead>
+          <tr>
+            <th>画面・機能</th>
+            {% if estimate.package_type == "カスタムパック" %}
+              <th>金額</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% if estimate.package_type == "基本パック" %}
+            <tr><td>データ登録画面</td></tr>
+            <tr><td>データ一覧画面</td></tr>
+            <tr><td>データ詳細画面</td></tr>
+          {% elif estimate.package_type == "運用パック" %}
+            <tr><td>データ登録画面</td></tr>
+            <tr><td>データ一覧画面</td></tr>
+            <tr><td>データ詳細画面</td></tr>
+            <tr><td>検索・絞り込み機能</td></tr>
+            <tr><td>データ修正画面</td></tr>
+            <tr><td>集計・状況確認画面</td></tr>
+          {% elif estimate.package_type == "カスタムパック" %}
+            {% for item in estimate.items %}
+              {% if is_screen_count_item(item.item_name, estimate.device_type) %}
+                <tr>
+                  <td>
+                    <strong>{{ estimate_item_label(item.item_name) }}</strong>
+                    <small>選択した端末タイプと画面数に合わせて、入力・一覧・詳細などの画面を作成します。</small>
+                  </td>
+                  <td>{{ "{:,}".format(item.price) }}円</td>
+                </tr>
+              {% else %}
+                {% set feature_name = estimate_feature_name(item.item_name) %}
+                <tr>
+                  <td>
+                    <strong>{{ estimate_item_label(item.item_name) }}</strong>
+                    <small>{{ feature_descriptions.get(feature_name, "業務に合わせて必要な機能を追加します。") }}</small>
+                  </td>
+                  <td>{{ "{:,}".format(item.price) }}円</td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            {% for item in estimate.items %}
+              <tr><td>{{ estimate_item_label(item.item_name) }}</td></tr>
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="print-estimate-note">
+      <strong>開発ツールライセンス</strong>
+      <span>業務アプリの作成・公開・運用基盤として、ノーコードツール「Click」を利用します。</span>
+      <span>ご利用にはClick Proプラン（月額 19,600円）の契約が別途必要です。</span>
+      <small>※合計金額には加算していません。</small>
+    </div>
+  </section>
+
+  <section class="print-flyer-sheet" aria-label="業務アプリ工房の紹介">
+    <div class="print-flyer-hero">
+      <img src="{{ url_for('static', filename='img/top-estimate-logo-transparent.png') }}" alt="業務アプリ工房">
+      <p>毎日の業務に合わせて、使いやすいアプリをすばやく形にします。</p>
+    </div>
+
+    <div class="print-flyer-grid">
+      <div>
+        <strong>現場に合わせた設計</strong>
+        <span>入力・検索・一覧・集計など、実際の作業の流れに合わせて画面を組み立てます。</span>
+      </div>
+      <div>
+        <strong>小さく始めやすい</strong>
+        <span>必要な機能から導入できるため、紙やExcelで管理している業務の改善にも向いています。</span>
+      </div>
+      <div>
+        <strong>運用まで見据えた提案</strong>
+        <span>公開後の修正や機能追加を考慮し、長く使いやすい構成を一緒に検討します。</span>
+      </div>
+    </div>
+
+    <div class="print-flyer-flow">
+      <h2>こんな業務におすすめです</h2>
+      <ul>
+        <li>顧客・案件・在庫・予約などのデータ管理</li>
+        <li>社内申請、作業報告、問い合わせ受付</li>
+        <li>検索、集計、状況確認をまとめた管理画面</li>
+      </ul>
+    </div>
+
+    <div class="print-flyer-cta">
+      <strong>詳しいサービス内容はこちら</strong>
+      <span>https://gyomu-app-kobo.com/</span>
+    </div>
+  </section>
 
   <div class="page-heading">
     <div>
-      <h1>見積結果</h1>
-      <p>選択内容を保持したまま問い合わせに進めます。</p>
+      <h1>見積り結果</h1>
+      <p>問合せ、詳細見積り</p>
     </div>
   </div>
 
-  <div class="row g-4">
+  <div class="row g-4 result-layout">
     <div class="col-lg-8">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr><th>項目</th><th class="text-end">金額</th></tr>
-          </thead>
-          <tbody>
-            {% for item in estimate.items %}
-              <tr>
-                <td>{{ item.item_name }}</td>
-                <td class="text-end">{{ "{:,}".format(item.price) }}円</td>
-              </tr>
+      <div class="form-section result-detail-card">
+        <div class="form-section-head">
+          <div>
+            <h2>画面・機能の内容</h2>
+            <p>作成する画面や機能の役割です。</p>
+          </div>
+        </div>
+
+        <div class="selected-estimate-visuals">
+          <div class="selected-estimate-card">
+            {% if estimate.device_type == "タブレット" %}
+              <img src="{{ url_for('static', filename='img/device-tablet-generated.png') }}" alt="タブレット向け">
+            {% elif estimate.device_type == "スマートフォン" %}
+              <img src="{{ url_for('static', filename='img/device-smartphone-generated.png') }}" alt="スマートフォン向け">
+            {% else %}
+              <img src="{{ url_for('static', filename='img/device-all-generated.png') }}" alt="スマートフォン・タブレット・PCの3タイプ対応">
+            {% endif %}
+            <div>
+              <span>選択した端末</span>
+              <strong>{{ estimate.device_type }}</strong>
+            </div>
+          </div>
+          <div class="selected-estimate-card">
+            {% if estimate.package_type == "基本パック" %}
+              <img src="{{ url_for('static', filename='img/package-basic-generated.png') }}" alt="基本パックのイメージ">
+            {% elif estimate.package_type == "運用パック" %}
+              <img src="{{ url_for('static', filename='img/package-operation-generated.png') }}" alt="運用パックのイメージ">
+            {% else %}
+              <img src="{{ url_for('static', filename='img/package-custom-generated.png') }}" alt="カスタムパックのイメージ">
+            {% endif %}
+            <div>
+              <span>選択したパック</span>
+              <strong>{{ estimate.package_type }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-item-list">
+          {% if estimate.package_type == "基本パック" %}
+            <div class="result-item-head">
+              <span>画面・機能</span>
+            </div>
+            {% for name in ["データ登録画面", "データ一覧画面", "データ詳細画面"] %}
+              <div class="result-item-row">
+                <span>
+                  <strong class="result-item-title">{{ name }}</strong>
+                  <small>{{ screen_descriptions[name] }}</small>
+                </span>
+              </div>
             {% endfor %}
-          </tbody>
-        </table>
+          {% elif estimate.package_type == "運用パック" %}
+            <div class="result-item-head">
+              <span>画面・機能</span>
+            </div>
+            {% for name in ["データ登録画面", "データ一覧画面", "データ詳細画面", "検索・絞り込み機能", "データ修正画面", "集計・状況確認画面"] %}
+              <div class="result-item-row">
+                <span>
+                  <strong class="result-item-title">{{ name }}</strong>
+                  <small>{{ screen_descriptions[name] }}</small>
+                </span>
+              </div>
+            {% endfor %}
+          {% elif estimate.package_type == "カスタムパック" %}
+            <div class="result-item-head has-price">
+              <span>画面・機能</span>
+              <span>金額</span>
+            </div>
+            {% for item in estimate.items %}
+              <div class="result-item-row has-price">
+                {% if is_screen_count_item(item.item_name, estimate.device_type) %}
+                  <span>
+                    <strong class="result-item-title">{{ estimate_item_label(item.item_name) }}</strong>
+                    <small>選択した端末タイプと画面数に合わせて、入力・一覧・詳細などの画面を作成します。</small>
+                  </span>
+                {% else %}
+                  {% set feature_name = estimate_feature_name(item.item_name) %}
+                  <span>
+                    <strong class="result-item-title">{{ estimate_item_label(item.item_name) }}</strong>
+                    <small>{{ feature_descriptions.get(feature_name, "業務に合わせて必要な機能を追加します。") }}</small>
+                  </span>
+                {% endif %}
+                <strong>{{ "{:,}".format(item.price) }}円</strong>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="result-item-head">
+              <span>画面・機能</span>
+            </div>
+            {% for item in estimate.items %}
+              {% if not is_screen_count_item(item.item_name, estimate.device_type) %}
+                {% set feature_name = estimate_feature_name(item.item_name) %}
+                <div class="result-item-row">
+                  <span>
+                    <strong class="result-item-title">{{ estimate_item_label(item.item_name) }}</strong>
+                    <small>{{ feature_descriptions.get(feature_name, "業務に合わせて必要な機能を追加します。") }}</small>
+                  </span>
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        </div>
       </div>
     </div>
+
     <div class="col-lg-4">
-      <div class="summary-panel sticky-lg-top result-side">
+      <div class="summary-panel result-side">
         <div class="small text-secondary">合計</div>
         <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円</div>
-        <dl class="row small mt-3 mb-4">
-          <dt class="col-5">デバイス</dt><dd class="col-7">{{ estimate.device_type }}</dd>
-          <dt class="col-5">パック</dt><dd class="col-7">{{ estimate.package_type }}</dd>
-        </dl>
         <div class="license-note">
           <div class="small text-secondary">開発ツールライセンス</div>
           <strong>ノーコードツール「Click」</strong>
-          <span>Proプランライセンス料</span>
-          <span>月額 ￥19,600</span>
+          <span>業務アプリの作成・公開・運用基盤として利用します。</span>
+          <span>ご利用にはClick Proプラン（月額 19,600円）の契約が別途必要です。</span>
           <a href="https://click.dev/" target="_blank" rel="noopener">https://click.dev/</a>
           <small>※合計金額には加算していません。</small>
         </div>
+        <div class="result-actions">
+          <a class="btn btn-outline-dark" href="{{ back_url }}">
+            {% if back_label == "機能選択へ戻る" %}
+              機能選択へ<br>戻る
+            {% else %}
+              {{ back_label }}
+            {% endif %}
+          </a>
+          <button class="btn btn-outline-dark no-print" type="button" data-print-estimate>PDF出力</button>
+        </div>
         {% if estimate.package_type != "カスタムパック" %}
           <div class="custom-estimate-cta">
-            <p>画面数や機能選択しての見積もりは</p>
+            <p>画面数や機能選択しての見積りは</p>
             <form method="post" action="{{ url_for('main.start_custom_from_estimate', estimate_id=estimate.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn-outline-dark w-100" type="submit">カスタムパック見積もりへ</button>
+              <button class="btn btn-outline-dark w-100" type="submit">カスタムパック見積りへ</button>
             </form>
           </div>
         {% endif %}
-        <div class="d-grid gap-2">
-          <a class="btn btn-outline-dark" href="{{ back_url }}">戻る</a>
-          <a class="btn btn-primary" href="{{ url_for('main.inquiry', estimate_id=estimate.id) }}">問い合わせへ進む</a>
+        <div class="result-inquiry-cta">
+          <p class="result-inquiry-lead">今使っている帳票を見せてください<br>詳細なお見積りを致します</p>
+          <a class="btn btn-primary" href="{{ url_for('main.inquiry', estimate_id=estimate.id) }}">問合せ、詳細お見積りへ進む</a>
         </div>
+        <a class="service-detail-link result-service-link" href="https://gyomu-app-kobo.com/" target="_blank" rel="noopener">
+          <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房">
+          <span>詳しいサービス内容はこちら</span>
+        </a>
       </div>
     </div>
   </div>
 </section>
+{% endblock %}
+{% block scripts %}
+  <script>
+    document.querySelector("[data-print-estimate]")?.addEventListener("click", () => {
+      window.print();
+    });
+  </script>
 {% endblock %}

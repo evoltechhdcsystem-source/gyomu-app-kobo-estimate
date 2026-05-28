@@ -1,35 +1,71 @@
 {% extends "base.html" %}
-{% block title %}デバイス選択{% endblock %}
+{% block title %}利用端末の選択{% endblock %}
 {% block content %}
 <section class="container py-4 py-lg-5">
-  {% include "_estimate_status.html" %}
-
   <div class="wizard-head">
     <div>
       <p class="eyebrow">Step 1</p>
-      <h1>対応デバイスを選択</h1>
-      <p>アプリを使う画面環境を選んでください。</p>
+      <h1>アプリを見る端末を選んでください</h1>
     </div>
   </div>
 
   <form method="post" class="wizard-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="choice-grid">
+    <div class="choice-grid device-choice-grid">
       {% for name, price in device_prices.items() %}
         <label class="choice-card">
           <input type="radio" name="device_type" value="{{ name }}" required>
-          {% if name == "レスポンシブ" %}
-            <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-responsive.svg') }}" alt="スマホ・タブレット・PCの画面サイズに対応">
-          {% else %}
-            <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-mobile-pc.svg') }}" alt="スマホまたはPC向け">
-          {% endif %}
-          <span class="choice-title">{{ name }}</span>
-          <span class="choice-price">{{ "{:,}".format(price) }}円 / 画面</span>
+          <div class="device-choice-layout">
+            <div class="device-choice-media">
+              {% if name == "タブレット" %}
+                <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-tablet-generated.png') }}" alt="タブレット向け">
+              {% elif name == "スマートフォン" %}
+                <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-smartphone-generated.png') }}" alt="スマートフォン向け">
+              {% else %}
+                <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-all-generated.png') }}" alt="スマートフォン・タブレット・PCの3タイプ対応">
+              {% endif %}
+            </div>
+            <div class="device-choice-copy">
+              <span class="choice-title">{{ name }}</span>
+              <span class="choice-price">{{ "{:,}".format(price) }}円 / 画面</span>
+              {% if name == "タブレット" %}
+                <div class="choice-detail">
+                  <strong>向いている使い方</strong>
+                  <ul>
+                    <li>現場で見ながら入力する</li>
+                    <li>画面を大きめに見たい</li>
+                    <li>点検表やチェック表を扱う</li>
+                  </ul>
+                </div>
+                <p class="choice-example">例: 設備点検、検品記録、工程チェックなど</p>
+              {% elif name == "スマートフォン" %}
+                <div class="choice-detail">
+                  <strong>向いている使い方</strong>
+                  <ul>
+                    <li>移動しながらすぐ入力する</li>
+                    <li>写真や簡単な記録を残す</li>
+                    <li>作業者ごとに手元で使う</li>
+                  </ul>
+                </div>
+                <p class="choice-example">例: 作業日報、巡回記録、現場からの報告など</p>
+              {% else %}
+                <div class="choice-detail">
+                  <strong>向いている使い方</strong>
+                  <ul>
+                    <li>事務所のPCでも現場端末でも使う</li>
+                    <li>管理者と作業者が別々の端末で確認する</li>
+                    <li>利用する場所や人が複数ある</li>
+                  </ul>
+                </div>
+                <p class="choice-example">例: 在庫確認、出荷状況の確認、部門をまたぐ管理など</p>
+              {% endif %}
+            </div>
+          </div>
         </label>
       {% endfor %}
     </div>
     <div class="wizard-actions">
-      <a class="btn btn-outline-dark" href="{{ url_for('main.index') }}">戻る</a>
+      <a class="btn btn-outline-dark" href="{{ url_for('main.index') }}">トップへ戻る</a>
       <button class="btn btn-primary btn-lg" type="submit">次へ</button>
     </div>
   </form>

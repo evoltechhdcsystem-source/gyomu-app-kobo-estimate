@@ -103,7 +103,7 @@ def inquiry_detail(inquiry_id: int):
     inquiry = Inquiry.query.get_or_404(inquiry_id)
     back_to = request.args.get("from")
     back_url = url_for("admin.estimates") if back_to == "estimates" else url_for("admin.inquiries")
-    back_label = "見積履歴一覧へ戻る" if back_to == "estimates" else "一覧へ戻る"
+    back_label = "見積り履歴一覧へ戻る" if back_to == "estimates" else "一覧へ戻る"
     if request.method == "POST":
         inquiry.status = request.form.get("status", inquiry.status)
         db.session.commit()
@@ -123,7 +123,7 @@ def export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "会社名", "担当者名", "メール", "電話番号", "ステータス", "見積金額", "作成日時"])
+    writer.writerow(["ID", "会社名", "担当者名", "メール", "電話番号", "ステータス", "見積り金額", "作成日時"])
     for inquiry in Inquiry.query.order_by(Inquiry.created_at.desc()).all():
         writer.writerow(
             [

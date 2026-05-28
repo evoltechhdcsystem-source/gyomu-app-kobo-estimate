@@ -5,7 +5,7 @@
   <div class="admin-head">
     <div>
       <h1>管理TOP</h1>
-      <p>見積履歴と問合せ管理を行えます。</p>
+      <p>見積り履歴と問合せ管理を行えます。</p>
     </div>
     <form method="post" action="{{ url_for('admin.logout') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -14,12 +14,12 @@
   </div>
 
   <div class="metric-grid">
-    <div><span>見積履歴</span><strong>{{ counts.estimates }}</strong></div>
+    <div><span>見積り履歴</span><strong>{{ counts.estimates }}</strong></div>
     <div><span>問合せ全件</span><strong>{{ counts.total }}</strong></div>
     <div><span>未対応</span><strong>{{ counts.open }}</strong></div>
   </div>
   <div class="d-flex gap-2 mt-4">
-    <a class="btn btn-primary" href="{{ url_for('admin.estimates') }}">見積履歴一覧</a>
+    <a class="btn btn-primary" href="{{ url_for('admin.estimates') }}">見積り履歴一覧</a>
     <a class="btn btn-primary" href="{{ url_for('admin.inquiries') }}">問合せ一覧</a>
     <a class="btn btn-outline-secondary" href="{{ url_for('admin.export_csv') }}">CSV出力</a>
   </div>

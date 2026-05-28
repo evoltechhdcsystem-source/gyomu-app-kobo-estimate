@@ -2,13 +2,11 @@
 {% block title %}パック選択{% endblock %}
 {% block content %}
 <section class="container py-4 py-lg-5">
-  {% include "_estimate_status.html" %}
-
   <div class="wizard-head">
     <div>
       <p class="eyebrow">Step 2</p>
       <h1>パックを選択</h1>
-      <p>{{ flow.device_type }} 向けの見積パックを選んでください。</p>
+      <p>現場で使いたい内容に近いパックを選んでください。</p>
     </div>
   </div>
 
@@ -17,28 +15,57 @@
     <div class="choice-grid three">
       <label class="choice-card package-card">
         <input type="radio" name="package_type" value="基本パック" data-screens="3" required>
-        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-basic.svg') }}" alt="基本パックのイメージ">
+        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-basic-generated.png') }}" alt="基本パックのイメージ">
         <span class="choice-title">基本パック</span>
         <span class="choice-price">3画面</span>
-        <small>まず小さく始めたい方向け。</small>
+        <small>まず小さく始めたい現場向け。</small>
+        <div class="package-detail">
+          <strong>入っている内容</strong>
+          <ul>
+            <li>記録を入力する画面</li>
+            <li>記録の一覧を見る画面</li>
+            <li>記録の詳細を確認する画面</li>
+          </ul>
+        </div>
+        <p class="package-example">例: 作業日報、設備点検、検品記録など</p>
       </label>
       <label class="choice-card package-card">
         <input type="radio" name="package_type" value="運用パック" data-screens="6" required>
-        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-extended.svg') }}" alt="拡張パックのイメージ">
+        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-operation-generated.png') }}" alt="運用パックのイメージ">
         <span class="choice-title">運用パック</span>
         <span class="choice-price">6画面</span>
-        <small>実運用に必要な画面をまとめたい方向け。</small>
+        <small>毎日の業務でしっかり使いたい現場向け。</small>
+        <div class="package-detail">
+          <strong>入っている内容</strong>
+          <ul>
+            <li>登録・一覧・詳細画面</li>
+            <li>検索や絞り込み</li>
+            <li>修正画面</li>
+            <li>集計や状況確認の画面</li>
+          </ul>
+        </div>
+        <p class="package-example">例: 在庫管理、不良記録、出荷確認、工程の進み具合確認など</p>
       </label>
       <label class="choice-card package-card">
         <input type="radio" name="package_type" value="カスタムパック" data-screens="1" required>
-        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-custom.svg') }}" alt="カスタムパックのイメージ">
+        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-custom-generated.png') }}" alt="カスタムパックのイメージ">
         <span class="choice-title">カスタムパック</span>
         <span class="choice-price">画面数・機能を指定</span>
-        <small>必要機能を自由に組み合わせたい方向け。</small>
+        <small>自社のやり方に合わせて作りたい現場向け。</small>
+        <div class="package-detail">
+          <strong>追加できる内容</strong>
+          <ul>
+            <li>必要な画面数を指定</li>
+            <li>メール通知</li>
+            <li>ログイン機能</li>
+            <li>外部サービスとの連携</li>
+          </ul>
+        </div>
+        <p class="package-example">例: 承認が必要な申請、複数部署で使う管理表、既存システムとの連携など</p>
       </label>
     </div>
     <div class="wizard-actions">
-      <a class="btn btn-outline-dark" href="{{ url_for('main.device_select') }}">戻る</a>
+      <a class="btn btn-outline-dark" href="{{ url_for('main.device_select') }}">端末選択へ戻る</a>
       <button class="btn btn-primary btn-lg" type="submit">次へ</button>
     </div>
   </form>

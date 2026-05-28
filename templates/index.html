@@ -1,31 +1,29 @@
 {% extends "base.html" %}
-{% block title %}概算見積もり - 業務アプリ工房{% endblock %}
+{% block title %}概算見積り - 業務アプリ工房{% endblock %}
+{% block body_class %}home-page{% endblock %}
+{% block header %}{% endblock %}
 {% block content %}
 <section class="hero-band">
   <div class="container hero-inner home-hero">
-    <div class="hero-visual">
-      <img src="{{ url_for('static', filename='img/topimage2.png') }}" alt="業務アプリ見積もりのイメージ">
-    </div>
-
-    <div class="hero-copy-block">
-      <p class="eyebrow">Estimate Simulator</p>
-      <h1><span>業務アプリ工房</span><span>見積もりWebアプリ</span></h1>
-      <p class="hero-copy">最短2step、30秒で業務アプリ開発の概算費用を確認できます。</p>
-      <a class="btn btn-primary btn-lg" href="{{ url_for('main.device_select') }}">見積もりスタート</a>
-    </div>
-
-    <div class="home-feature-grid">
-      <div class="home-feature-card">
-        <img class="feature-illo" src="{{ url_for('static', filename='img/1_option.png') }}" alt="オプション追加可能">
-        <strong>オプション追加可能</strong>
+    <div class="top-logo-hero">
+      <img src="{{ url_for('static', filename='img/top-estimate-logo-transparent.png') }}" alt="業務アプリ工房 見積り">
+      <div class="top-feature-chips" aria-label="見積りアプリの特徴">
+        <span>1画面 10,000円〜</span>
+        <span>1機能 5,000円〜</span>
+        <span>最短1週間で納品</span>
+        <span>ノーコード高速開発</span>
+        <span>小さく始められる</span>
+        <span>IT担当者不在でもOK</span>
       </div>
-      <div class="home-feature-card">
-        <img class="feature-illo" src="{{ url_for('static', filename='img/2_pack3.png') }}" alt="3つのパックから選べる">
-        <strong>3つのパックから選べる</strong>
-      </div>
-      <div class="home-feature-card">
-        <img class="feature-illo" src="{{ url_for('static', filename='img/3_price.png') }}" alt="料金はその場で表示">
-        <strong>料金はその場で表示</strong>
+      <div class="top-cta-row">
+        <a class="btn btn-primary top-start-button" href="{{ url_for('main.device_select') }}">
+          <span>見積りスタート</span>
+          <strong aria-hidden="true">→</strong>
+        </a>
+        <a class="service-detail-link" href="https://gyomu-app-kobo.com/" target="_blank" rel="noopener">
+          <span>詳しいサービス内容はこちら</span>
+          <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房">
+        </a>
       </div>
     </div>
   </div>

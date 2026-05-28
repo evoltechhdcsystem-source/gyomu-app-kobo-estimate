@@ -1,65 +1,151 @@
 {% extends "base.html" %}
-{% block title %}問い合わせ{% endblock %}
+{% block title %}問合せ、詳細お見積り{% endblock %}
 {% block content %}
 <section class="container py-4 py-lg-5">
-  {% include "_estimate_status.html" %}
-
   <div class="page-heading">
     <div>
-      <h1>問い合わせ</h1>
-      <p>見積内容を添えて送信します。添付ファイルはローカル保存されます。</p>
+      <h1>問合せ、詳細お見積り</h1>
     </div>
   </div>
 
-  <div class="row g-4">
+  <div class="row g-4 inquiry-layout">
     <div class="col-lg-7">
-      <form method="post" enctype="multipart/form-data" class="form-section">
+      <form method="post" enctype="multipart/form-data" class="form-section inquiry-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <h2>お客様情報</h2>
-        <div class="mb-3">
-          <label class="form-label">会社名 <span class="required">必須</span></label>
-          <input class="form-control" name="company_name" required>
+        <div class="form-section-head">
+          <div>
+            <h2>お客様情報</h2>
+            <p>概算見積りとあわせて送信されます。</p>
+          </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label">担当者名 <span class="required">必須</span></label>
-          <input class="form-control" name="person_name" required>
+
+        <div class="inquiry-field-grid">
+          <div class="field-block">
+            <label class="form-label">会社名 <span class="required">必須</span></label>
+            <input class="form-control" name="company_name" autocomplete="organization" required>
+          </div>
+          <div class="field-block">
+            <label class="form-label">担当者名 <span class="required">必須</span></label>
+            <input class="form-control" name="person_name" autocomplete="name" required>
+          </div>
+          <div class="field-block">
+            <label class="form-label">メール <span class="required">必須</span></label>
+            <input class="form-control" name="email" type="email" autocomplete="email" required>
+          </div>
+          <div class="field-block">
+            <label class="form-label">電話番号</label>
+            <input class="form-control" name="phone" type="tel" autocomplete="tel">
+          </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label">メール <span class="required">必須</span></label>
-          <input class="form-control" name="email" type="email" required>
+
+        <div class="field-block">
+          <label class="form-label">問合せ、詳細お見積り内容</label>
+          <textarea class="form-control" name="message" rows="5" placeholder="相談したい内容や、作りたい業務アプリの概要があればご記入ください。"></textarea>
         </div>
-        <div class="mb-3">
-          <label class="form-label">電話番号</label>
-          <input class="form-control" name="phone">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">問合せ内容</label>
-          <textarea class="form-control" name="message" rows="5"></textarea>
-        </div>
-        <div class="mb-4">
+
+        <div class="field-block file-field">
           <label class="form-label">添付ファイル</label>
           <input class="form-control" name="attachment" type="file" accept=".xlsx,.xls,.pdf,.png,.jpg,.jpeg,.docx">
-          <div class="form-text">最大20MB。xlsx, xls, pdf, png, jpg, docx に対応。</div>
+          <div class="form-text">最大20MB、xlsx, xls, pdf, png, jpg, docx に対応。</div>
         </div>
+
+        <label class="privacy-consent">
+          <input type="checkbox" name="privacy_consent" value="1" required>
+          <span>
+            <a href="https://evoltech-hdc-system.com/%E5%80%8B%E4%BA%BA%E6%83%85%E5%A0%B1%E4%BF%9D%E8%AD%B7%E6%96%B9%E9%87%9D/" target="_blank" rel="noopener">個人情報保護方針</a>に同意します
+          </span>
+        </label>
+
         <div class="wizard-actions">
-          <a class="btn btn-outline-dark" href="{{ back_url }}">戻る</a>
-          <button class="btn btn-primary btn-lg" type="submit">問い合わせを送信</button>
+          <button class="btn btn-primary btn-lg" type="submit">問合せ、詳細お見積りを送信</button>
+        </div>
+
+        <div class="privacy-mark-box">
+          <img src="{{ url_for('static', filename='img/privacy-mark.gif') }}" alt="プライバシーマーク 19000975">
+          <div>
+            <strong>個人情報の取り扱いについて</strong>
+            <span>入力いただいた情報は、お問い合わせ対応と見積り内容の確認に利用します。</span>
+          </div>
         </div>
       </form>
     </div>
     <div class="col-lg-5">
-      <div class="summary-panel">
-        <div class="small text-secondary">送信される見積</div>
-        <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円</div>
-        <ul class="list-group list-group-flush mt-3">
-          {% for item in estimate.items %}
-            <li class="list-group-item d-flex justify-content-between px-0">
-              <span>{{ item.item_name }}</span>
-              <strong>{{ "{:,}".format(item.price) }}円</strong>
-            </li>
-          {% endfor %}
-        </ul>
+      <div class="summary-panel inquiry-service-card">
+        <div>
+          <h2>業務に合わせて、使いやすく。</h2>
+          <p>今お使いの帳票やExcel、紙の運用を見ながら、現場で迷わず使える業務アプリをご提案します。</p>
+        </div>
+        <div class="inquiry-service-points">
+          <span>入力・検索・一覧・集計まで相談可能</span>
+          <span>小さく始めてあとから機能追加</span>
+          <span>公開後の修正や運用も見据えて設計</span>
+        </div>
+        <a class="service-detail-link result-service-link inquiry-service-site-link" href="https://gyomu-app-kobo.com/" target="_blank" rel="noopener">
+          <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房">
+          <span>詳しいサービス内容はこちら</span>
+        </a>
       </div>
+
+      <div class="summary-panel inquiry-summary sticky-lg-top">
+        <div class="small text-secondary">送信される見積り</div>
+        <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円</div>
+        <div class="inquiry-summary-visuals">
+          <div class="inquiry-summary-card">
+            {% if estimate.device_type == "タブレット" %}
+              <img src="{{ url_for('static', filename='img/device-tablet-generated.png') }}" alt="タブレット向け">
+            {% elif estimate.device_type == "スマートフォン" %}
+              <img src="{{ url_for('static', filename='img/device-smartphone-generated.png') }}" alt="スマートフォン向け">
+            {% else %}
+              <img src="{{ url_for('static', filename='img/device-all-generated.png') }}" alt="スマートフォン・タブレット・PCの3タイプ対応">
+            {% endif %}
+            <div>
+              <span>利用端末</span>
+              <strong>{{ estimate.device_type }}</strong>
+            </div>
+          </div>
+          <div class="inquiry-summary-card">
+            {% if estimate.package_type == "基本パック" %}
+              <img src="{{ url_for('static', filename='img/package-basic-generated.png') }}" alt="基本パックのイメージ">
+            {% elif estimate.package_type == "運用パック" %}
+              <img src="{{ url_for('static', filename='img/package-operation-generated.png') }}" alt="運用パックのイメージ">
+            {% else %}
+              <img src="{{ url_for('static', filename='img/package-custom-generated.png') }}" alt="カスタムパックのイメージ">
+            {% endif %}
+            <div>
+              <span>パック</span>
+              <strong>{{ estimate.package_type }}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="inquiry-summary-items">
+          <strong>見積り項目</strong>
+          {% if estimate.package_type == "基本パック" %}
+            <span>データ登録画面</span>
+            <span>データ一覧画面</span>
+            <span>データ詳細画面</span>
+          {% elif estimate.package_type == "運用パック" %}
+            <span>データ登録画面</span>
+            <span>データ一覧画面</span>
+            <span>データ詳細画面</span>
+            <span>検索・絞り込み機能</span>
+            <span>データ修正画面</span>
+            <span>集計・状況確認画面</span>
+          {% elif estimate.package_type == "カスタムパック" %}
+            {% for item in estimate.items %}
+              <span class="inquiry-summary-item">
+                <span>{{ estimate_item_label(item.item_name) }}</span>
+                <strong>{{ "{:,}".format(item.price) }}円</strong>
+              </span>
+            {% endfor %}
+          {% else %}
+            {% for item in estimate.items %}
+              <span>{{ estimate_item_label(item.item_name) }}</span>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+
+      <a class="btn btn-outline-dark inquiry-back-link" href="{{ back_url }}">見積り結果へ戻る</a>
     </div>
   </div>
 </section>
