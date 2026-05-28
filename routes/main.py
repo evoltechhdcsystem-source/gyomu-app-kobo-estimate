@@ -79,6 +79,13 @@ SCREEN_DESCRIPTIONS = {
     "データ修正画面": "登録済みの情報をあとから変更・更新できます。",
     "集計・状況確認画面": "件数や状態を集計し、業務の状況を把握しやすくします。",
 }
+INCLUDED_WORK_ITEMS = [
+    "画面・機能確認のお打ち合わせ 2時間まで",
+    "アプリの設計・制作",
+    "開発環境 Click の契約サポート",
+    "仮納品後の微調整",
+    "納品・操作説明 1時間まで",
+]
 
 
 def estimate_item_label(item_name: str) -> str:
@@ -221,8 +228,28 @@ def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
             ),
         )
     )
+    included_work_rows = [[_pdf_paragraph("本見積りに含まれる作業", label)]]
+    for item in INCLUDED_WORK_ITEMS:
+        included_work_rows.append([_pdf_paragraph(f"・{item}", base)])
     story.extend(
         [
+            Spacer(1, 9 * mm),
+            Table(
+                included_work_rows,
+                colWidths=[156 * mm],
+                style=TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, -1), "HeiseiKakuGo-W5"),
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#fff8f2")),
+                        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#e5ddd4")),
+                        ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#e5ddd4")),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                        ("TOPPADDING", (0, 0), (-1, -1), 6),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ]
+                ),
+            ),
             Spacer(1, 9 * mm),
             _pdf_paragraph("開発ツールライセンス", ParagraphStyle("JapaneseNoteHead", parent=base, fontSize=11, leading=16)),
             _pdf_paragraph(

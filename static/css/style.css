@@ -1432,6 +1432,7 @@ textarea.form-control {
   border-radius: 50%;
 }
 
+.included-work-note,
 .license-note,
 .custom-estimate-cta {
   display: grid;
@@ -1440,6 +1441,17 @@ textarea.form-control {
   margin-bottom: 14px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
+}
+
+.included-work-note ul {
+  display: grid;
+  gap: 5px;
+  margin: 2px 0 0;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  font-size: .9rem;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .license-note strong,
