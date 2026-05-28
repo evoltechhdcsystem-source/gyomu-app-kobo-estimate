@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+from datetime import datetime
+
 from flask import (
     Blueprint,
     current_app,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -23,6 +27,13 @@ from services.estimate_service import (
 from services.mail_service import send_inquiry_mails
 
 main_bp = Blueprint("main", __name__)
+STEP_FIELDS = {
+    "started": "step_started_at",
+    "device": "step_device_at",
+    "package": "step_package_at",
+    "custom": "step_custom_at",
+    "result": "step_result_at",
+}
 FEATURE_DESCRIPTIONS = {
     "データ登録": "新しい情報を入力フォームから追加できます。",
     "データ編集": "登録済みの情報をあとから修正できます。",
@@ -69,6 +80,13 @@ def estimate_feature_name(item_name: str) -> str:
     return item_name.split(" x ", 1)[0]
 
 
+def estimate_screen_count(item_name: str) -> int:
+    try:
+        return int(item_name.rsplit(" x ", 1)[-1].replace("画面", ""))
+    except (ValueError, IndexError):
+        return 0
+
+
 def is_screen_count_item(item_name: str, device_type: str) -> bool:
     return item_name.startswith(device_type) and "画面" in item_name
 
@@ -78,6 +96,90 @@ def _as_int(value, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _now() -> datetime:
+    return datetime.utcnow()
+
+
+def _capture_referrer(flow: dict) -> None:
+    if flow.get("referrer_url") or not request.referrer:
+        return
+    if request.referrer.startswith(request.host_url):
+        return
+    flow["referrer_url"] = request.referrer[:2000]
+
+
+def _client_ip() -> str:
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip()
+    return request.remote_addr or ""
+
+
+def _visitor_key() -> str:
+    source = "|".join(
+        [
+            _client_ip(),
+            request.headers.get("User-Agent", ""),
+            request.headers.get("Accept-Language", ""),
+        ]
+    )
+    digest = hashlib.sha256(source.encode("utf-8")).hexdigest()[:12]
+    return f"u-{digest}"
+
+
+def _flow_estimate(flow: dict) -> Estimate | None:
+    estimate_id = flow.get("estimate_id")
+    if not estimate_id:
+        return None
+    return Estimate.query.get(estimate_id)
+
+
+def _ensure_flow_estimate(flow: dict) -> Estimate:
+    estimate = _flow_estimate(flow)
+    if estimate is None:
+        estimate = Estimate(device_type="未選択", package_type="未選択", total_price=0)
+        db.session.add(estimate)
+        db.session.flush()
+        flow["estimate_id"] = estimate.id
+    if not estimate.visitor_key:
+        estimate.visitor_key = _visitor_key()
+    if flow.get("referrer_url") and not estimate.referrer_url:
+        estimate.referrer_url = flow["referrer_url"]
+    return estimate
+
+
+def _touch_flow_step(flow: dict, step_key: str) -> dict:
+    _capture_referrer(flow)
+    step_times = flow.setdefault("step_times", {})
+    step_times.setdefault(step_key, _now().isoformat())
+    estimate = _ensure_flow_estimate(flow)
+    field_name = STEP_FIELDS.get(step_key)
+    tracked_at = _flow_time(flow, step_key)
+    if field_name and tracked_at and not getattr(estimate, field_name):
+        setattr(estimate, field_name, tracked_at)
+    db.session.commit()
+    session["estimate_flow"] = flow
+    return flow
+
+
+def _flow_time(flow: dict, step_key: str) -> datetime | None:
+    value = (flow.get("step_times") or {}).get(step_key)
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _apply_tracking_to_estimate(estimate: Estimate, flow: dict) -> None:
+    estimate.referrer_url = flow.get("referrer_url")
+    for step_key, field_name in STEP_FIELDS.items():
+        tracked_at = _flow_time(flow, step_key)
+        if tracked_at and not getattr(estimate, field_name):
+            setattr(estimate, field_name, tracked_at)
 
 
 def _estimate_flow_total(flow: dict | None, default_custom_screens: int = 0) -> int:
@@ -164,19 +266,28 @@ def _save_estimate_and_redirect(flow: dict):
         selected_features,
         feature_quantities,
     )
-    estimate = Estimate(
-        device_type=result["device_type"],
-        package_type=result["package_type"],
-        total_price=result["total_price"],
-    )
-    db.session.add(estimate)
-    db.session.flush()
+    flow = _touch_flow_step(flow, "result")
+    estimate = _flow_estimate(flow)
+    if estimate is None:
+        estimate = Estimate(device_type="未選択", package_type="未選択", total_price=0)
+        db.session.add(estimate)
+        db.session.flush()
+    else:
+        EstimateItem.query.filter_by(estimate_id=estimate.id).delete()
+
+    estimate.device_type = result["device_type"]
+    estimate.package_type = result["package_type"]
+    estimate.total_price = result["total_price"]
+    if not estimate.visitor_key:
+        estimate.visitor_key = _visitor_key()
+    _apply_tracking_to_estimate(estimate, flow)
 
     for item in result["items"]:
         db.session.add(
             EstimateItem(estimate_id=estimate.id, item_name=item["name"], price=item["price"])
         )
     db.session.commit()
+    flow["estimate_id"] = estimate.id
     session["estimate_flow"] = flow
     session["estimate_back_endpoint"] = (
         "main.custom_estimate" if package_type == "カスタムパック" else "main.package_select"
@@ -192,11 +303,18 @@ def _current_or_estimate_device(estimate: Estimate) -> str:
 
 @main_bp.get("/")
 def index():
+    flow = session.get("estimate_flow") or {}
+    if flow.get("estimate_id"):
+        flow = {}
+    _touch_flow_step(flow, "started")
     return render_template("index.html", estimate_status=_estimate_status("top"))
 
 
 @main_bp.route("/device", methods=["GET", "POST"])
 def device_select():
+    flow = session.get("estimate_flow") or {}
+    flow = _touch_flow_step(flow, "device")
+
     if request.method == "GET":
         return render_template(
             "device_select.html",
@@ -213,7 +331,11 @@ def device_select():
             estimate_status=_estimate_status("device"),
         ), 400
 
-    session["estimate_flow"] = {"device_type": device_type}
+    flow["device_type"] = device_type
+    estimate = _ensure_flow_estimate(flow)
+    estimate.device_type = device_type
+    db.session.commit()
+    session["estimate_flow"] = flow
     return redirect(url_for("main.package_select"))
 
 
@@ -222,6 +344,7 @@ def package_select():
     flow = session.get("estimate_flow")
     if not flow or not flow.get("device_type"):
         return redirect(url_for("main.device_select"))
+    flow = _touch_flow_step(flow, "package")
 
     if request.method == "GET":
         return render_template(
@@ -244,6 +367,10 @@ def package_select():
         ), 400
 
     flow["package_type"] = package_type
+    estimate = _ensure_flow_estimate(flow)
+    estimate.device_type = flow["device_type"]
+    estimate.package_type = package_type
+    db.session.commit()
     session["estimate_flow"] = flow
     if package_type == "カスタムパック":
         return redirect(url_for("main.custom_estimate"))
@@ -257,6 +384,8 @@ def custom_estimate():
         return redirect(url_for("main.device_select"))
     if flow.get("package_type") != "カスタムパック":
         return redirect(url_for("main.package_select"))
+
+    flow = _touch_flow_step(flow, "custom")
 
     if request.method == "GET":
         return render_template(
@@ -322,6 +451,9 @@ def create_estimate():
 @main_bp.get("/estimate/<int:estimate_id>")
 def estimate_result(estimate_id: int):
     estimate = Estimate.query.get_or_404(estimate_id)
+    if not estimate.step_result_at:
+        estimate.step_result_at = _now()
+        db.session.commit()
     flow = session.get("estimate_flow")
     back_endpoint = (
         "main.custom_estimate"
@@ -350,11 +482,25 @@ def estimate_result(estimate_id: int):
 @main_bp.post("/estimate/<int:estimate_id>/custom")
 def start_custom_from_estimate(estimate_id: int):
     estimate = Estimate.query.get_or_404(estimate_id)
+    flow = session.get("estimate_flow") or {}
     session["estimate_flow"] = {
         "device_type": _current_or_estimate_device(estimate),
         "package_type": "カスタムパック",
+        "estimate_id": estimate.id,
+        "referrer_url": flow.get("referrer_url") or estimate.referrer_url,
+        "step_times": flow.get("step_times") or {},
     }
     return redirect(url_for("main.custom_estimate"))
+
+
+@main_bp.post("/estimate/<int:estimate_id>/pdf-click")
+def record_pdf_click(estimate_id: int):
+    estimate = Estimate.query.get_or_404(estimate_id)
+    if not estimate.pdf_clicked_at:
+        estimate.pdf_clicked_at = _now()
+    estimate.pdf_click_count = (estimate.pdf_click_count or 0) + 1
+    db.session.commit()
+    return jsonify({"ok": True, "pdf_click_count": estimate.pdf_click_count})
 
 
 @main_bp.route("/inquiry/<int:estimate_id>", methods=["GET", "POST"])

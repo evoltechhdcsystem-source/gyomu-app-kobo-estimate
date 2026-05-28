@@ -14,6 +14,15 @@ class Estimate(db.Model):
     device_type = db.Column(db.String(50), nullable=False)
     package_type = db.Column(db.String(50), nullable=False)
     total_price = db.Column(db.Integer, nullable=False)
+    visitor_key = db.Column(db.String(40))
+    referrer_url = db.Column(db.Text)
+    step_started_at = db.Column(db.DateTime)
+    step_device_at = db.Column(db.DateTime)
+    step_package_at = db.Column(db.DateTime)
+    step_custom_at = db.Column(db.DateTime)
+    step_result_at = db.Column(db.DateTime)
+    pdf_clicked_at = db.Column(db.DateTime)
+    pdf_click_count = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     items = db.relationship("EstimateItem", backref="estimate", cascade="all, delete-orphan")
@@ -56,13 +65,3 @@ class InquiryAttachment(db.Model):
     box_file_id = db.Column(db.String(255))
     box_url = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-
-
-class Master(db.Model):
-    __tablename__ = "masters"
-
-    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
-    category = db.Column(db.String(80), nullable=False)
-    name = db.Column(db.String(120), nullable=False)
-    price = db.Column(db.Integer, nullable=False)
-

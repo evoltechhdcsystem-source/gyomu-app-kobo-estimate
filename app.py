@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask
 from flask_wtf.csrf import CSRFProtect
+from sqlalchemy import inspect, text
 
 from models import db
 from routes.admin import admin_bp
@@ -26,6 +27,30 @@ def _database_uri(instance_dir: Path) -> str:
     return f"sqlite:///{instance_dir / 'estimate_app.db'}"
 
 
+def _ensure_tracking_columns() -> None:
+    inspector = inspect(db.engine)
+    existing_columns = {column["name"] for column in inspector.get_columns("estimates")}
+    is_postgres = db.engine.dialect.name.startswith("postgres")
+    column_defs = {
+        "visitor_key": "VARCHAR(40)",
+        "referrer_url": "TEXT",
+        "step_started_at": "TIMESTAMP" if is_postgres else "DATETIME",
+        "step_device_at": "TIMESTAMP" if is_postgres else "DATETIME",
+        "step_package_at": "TIMESTAMP" if is_postgres else "DATETIME",
+        "step_custom_at": "TIMESTAMP" if is_postgres else "DATETIME",
+        "step_result_at": "TIMESTAMP" if is_postgres else "DATETIME",
+        "pdf_clicked_at": "TIMESTAMP" if is_postgres else "DATETIME",
+        "pdf_click_count": "INTEGER NOT NULL DEFAULT 0",
+    }
+    for column_name, column_type in column_defs.items():
+        if column_name not in existing_columns:
+            exists_clause = "IF NOT EXISTS " if is_postgres else ""
+            db.session.execute(
+                text(f"ALTER TABLE estimates ADD COLUMN {exists_clause}{column_name} {column_type}")
+            )
+    db.session.commit()
+
+
 def create_app() -> Flask:
     load_dotenv()
 
@@ -43,7 +68,7 @@ def create_app() -> Flask:
         MAX_CONTENT_LENGTH=20 * 1024 * 1024,
         UPLOAD_FOLDER=str(upload_dir),
         ADMIN_USERNAME=os.getenv("ADMIN_USERNAME", "admin"),
-        ADMIN_PASSWORD=os.getenv("ADMIN_PASSWORD", "password"),
+        ADMIN_PASSWORD=os.getenv("ADMIN_PASSWORD", "Evoltech999"),
         MAIL_FROM=os.getenv("MAIL_FROM", "no-reply@example.com"),
         MAIL_TO=os.getenv("MAIL_TO", "sales@example.com"),
     )
@@ -55,6 +80,7 @@ def create_app() -> Flask:
 
     with app.app_context():
         db.create_all()
+        _ensure_tracking_columns()
 
     return app
 

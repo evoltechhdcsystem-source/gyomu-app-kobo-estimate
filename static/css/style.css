@@ -71,15 +71,6 @@ body {
   }
 }
 
-@keyframes start-button-shine {
-  0% {
-    transform: translateX(-140%) skewX(-18deg);
-  }
-  45%, 100% {
-    transform: translateX(210%) skewX(-18deg);
-  }
-}
-
 main > section {
   animation: fade-up .45s ease;
 }
@@ -116,6 +107,11 @@ main > section {
   width: min(240px, 48vw);
   max-height: 48px;
   object-fit: contain;
+}
+
+.admin-page .brand-logo img {
+  width: min(260px, 56vw);
+  max-height: 64px;
 }
 
 .brand-logo span {
@@ -262,63 +258,34 @@ main > section {
   min-width: min(360px, 42vw);
   min-height: 76px;
   padding: 20px 36px;
-  color: #10230b;
-  border: 3px solid var(--navy);
+  color: #fff;
+  border: 2px solid var(--navy);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, #a9f24a 0%, var(--green) 58%, #7ed12d 100%);
+    linear-gradient(180deg, #ff7a24 0%, var(--brand) 100%);
   font-size: clamp(1.25rem, 3vw, 1.65rem);
   font-weight: 950;
   line-height: 1.2;
   letter-spacing: 0;
-  box-shadow: 0 9px 0 var(--green-dark), 0 18px 26px rgba(31, 47, 55, .18);
-  animation: start-button-bounce 2.4s ease-in-out infinite;
+  box-shadow: 0 7px 0 var(--brand-dark), 0 18px 28px rgba(31, 47, 55, .18);
+  animation: none;
 }
 
-.top-logo-hero .top-start-button::before {
-  content: "";
-  position: absolute;
-  top: -45%;
-  bottom: -45%;
-  left: 0;
-  width: 42%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .72), transparent);
-  animation: start-button-shine 3.2s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.top-logo-hero .top-start-button span,
-.top-logo-hero .top-start-button strong {
+.top-logo-hero .top-start-button span {
   position: relative;
   z-index: 1;
 }
 
-.top-logo-hero .top-start-button strong {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-  color: #fff;
-  background: var(--brand);
-  border: 2px solid var(--navy);
-  border-radius: 999px;
-  font-size: 1.15rem;
-  line-height: 1;
-  box-shadow: 0 3px 0 rgba(31, 47, 55, .22);
-}
-
 .top-logo-hero .top-start-button:hover {
-  color: #10230b;
+  color: #fff;
   border-color: var(--navy);
-  box-shadow: 0 6px 0 var(--green-dark), 0 16px 24px rgba(31, 47, 55, .2);
-  animation-play-state: paused;
-  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 5px 0 var(--brand-dark), 0 14px 22px rgba(31, 47, 55, .2);
+  transform: translateY(-2px);
 }
 
 .top-logo-hero .top-start-button:active {
-  box-shadow: 0 3px 0 var(--green-dark), 0 8px 14px rgba(31, 47, 55, .18);
-  transform: translateY(4px) scale(.99);
+  box-shadow: 0 2px 0 var(--brand-dark), 0 8px 14px rgba(31, 47, 55, .18);
+  transform: translateY(3px);
 }
 
 .service-detail-link {
@@ -327,8 +294,9 @@ main > section {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 72px;
-  padding: 10px 18px 12px;
+  min-width: min(300px, 36vw);
+  min-height: 80px;
+  padding: 12px 28px 14px;
   color: var(--navy);
   background: transparent;
   border: 2px solid rgba(31, 47, 55, .28);
@@ -341,14 +309,14 @@ main > section {
 }
 
 .service-detail-link span {
-  font-size: .92rem;
+  font-size: 1rem;
   line-height: 1.25;
 }
 
 .service-detail-link img {
   display: block;
-  width: min(170px, 38vw);
-  max-height: 34px;
+  width: min(210px, 32vw);
+  max-height: 42px;
   object-fit: contain;
   animation: none;
   translate: none;
@@ -1876,12 +1844,13 @@ a.progress-step:hover {
   position: fixed;
   left: 50%;
   bottom: 16px;
-  width: min(1116px, calc(100vw - 32px));
+  width: min(1116px, calc(100vw - 24px));
   transform: translateX(-50%);
   z-index: 5;
-  display: flex;
-  justify-content: flex-end;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 28px minmax(120px, 1fr) 28px minmax(120px, 1fr);
+  align-items: center;
+  gap: 10px;
   margin-top: 0;
   padding: 16px 18px;
   background: rgba(255, 255, 255, .97);
@@ -1893,20 +1862,35 @@ a.progress-step:hover {
 
 .custom-price-bar div {
   display: grid;
+  justify-items: center;
   gap: 2px;
-  min-width: 160px;
+  min-width: 0;
+  text-align: center;
+}
+
+.custom-price-bar .price-formula-symbol {
+  color: var(--ink);
+  font-size: 1.2rem;
+  font-weight: 950;
+  line-height: 1;
+  min-width: 0;
+  padding-bottom: 5px;
+  text-align: center;
+  align-self: end;
 }
 
 .custom-price-bar span {
   color: var(--muted);
   font-size: .78rem;
   font-weight: 800;
+  line-height: 1.25;
 }
 
 .custom-price-bar strong {
   color: var(--brand);
-  font-size: 1.35rem;
+  font-size: clamp(1rem, 2.2vw, 1.35rem);
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .flow-line span {
@@ -1984,6 +1968,46 @@ a.progress-step:hover {
 .metric-grid strong {
   display: block;
   font-size: 2.25rem;
+}
+
+.admin-wide {
+  max-width: 1680px;
+}
+
+.admin-history-table {
+  min-width: 1280px;
+}
+
+.history-url-cell {
+  max-width: 280px;
+  word-break: break-all;
+}
+
+.history-step-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  min-width: 230px;
+}
+
+.history-step-list div {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px;
+}
+
+.history-step-list dt,
+.history-step-list dd {
+  margin: 0;
+}
+
+.history-step-list dt {
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+.history-step-list dd {
+  font-weight: 700;
 }
 
 .detail-list {
@@ -2151,13 +2175,6 @@ a.progress-step:hover {
     font-size: clamp(1.08rem, 4.8vw, 1.22rem);
   }
 
-  .top-logo-hero .top-start-button strong {
-    width: 30px;
-    height: 30px;
-    flex-basis: 30px;
-    font-size: 1rem;
-  }
-
   .service-detail-link {
     width: min(100%, 290px);
     min-height: 66px;
@@ -2171,8 +2188,8 @@ a.progress-step:hover {
   }
 
   .service-detail-link img {
-    width: min(126px, 34vw);
-    max-height: 30px;
+    width: min(180px, 50vw);
+    max-height: 38px;
   }
 
   .result-service-link {
@@ -2292,11 +2309,37 @@ a.progress-step:hover {
   }
 
   .custom-price-bar {
-    flex-direction: column;
+    align-items: center;
+    width: calc(100vw - 12px);
+    grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr);
+    gap: 3px;
+    padding: 10px 6px;
   }
 
   .custom-price-bar div {
     min-width: 0;
+  }
+
+  .custom-price-bar .price-formula-symbol {
+    display: block;
+    min-width: 14px;
+    padding-bottom: 3px;
+    font-size: .95rem;
+  }
+
+  .custom-price-bar span {
+    font-size: clamp(.58rem, 2.4vw, .68rem);
+    white-space: nowrap;
+  }
+
+  .custom-price-bar strong {
+    font-size: clamp(.86rem, 3.5vw, 1rem);
+    white-space: nowrap;
+  }
+
+  .custom-price-bar div:last-child strong {
+    font-size: clamp(1rem, 3.9vw, 1.14rem);
+    font-weight: 950;
   }
 
   .estimate-status-head {

@@ -77,10 +77,12 @@
         <span>画面の料金</span>
         <strong data-screen-total>0円</strong>
       </div>
+      <span class="price-formula-symbol" aria-hidden="true">+</span>
       <div>
         <span>追加機能の料金</span>
         <strong data-feature-total>0円</strong>
       </div>
+      <span class="price-formula-symbol" aria-hidden="true">=</span>
       <div>
         <span>現在の見積り金額</span>
         <strong data-estimate-total>{{ "{:,}".format(estimate_status.total_price) }}円</strong>

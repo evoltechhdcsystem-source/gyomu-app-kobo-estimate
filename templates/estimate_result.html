@@ -282,6 +282,11 @@
 {% block scripts %}
   <script>
     document.querySelector("[data-print-estimate]")?.addEventListener("click", () => {
+      fetch("{{ url_for('main.record_pdf_click', estimate_id=estimate.id) }}", {
+        method: "POST",
+        headers: { "X-CSRFToken": "{{ csrf_token() }}" },
+        keepalive: true
+      }).catch(() => {});
       window.print();
     });
   </script>

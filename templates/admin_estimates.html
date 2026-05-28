@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}見積り履歴一覧{% endblock %}
 {% block content %}
-<section class="container py-4 py-lg-5">
+<section class="container-fluid admin-wide py-4 py-lg-5">
   <div class="admin-head">
     <div>
       <h1>見積り履歴一覧</h1>
@@ -10,7 +10,7 @@
     <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">管理TOP</a>
   </div>
   <div class="table-responsive">
-    <table class="table table-hover align-middle">
+    <table class="table table-hover align-middle admin-history-table">
       <thead>
         <tr>
           <th>ID</th>
@@ -19,6 +19,10 @@
           <th class="text-end">金額</th>
           <th>問合せ</th>
           <th>日時</th>
+          <th>ユーザー識別子</th>
+          <th>流入元URL</th>
+          <th>ステップ通過</th>
+          <th>PDF出力</th>
         </tr>
       </thead>
       <tbody>
@@ -52,9 +56,40 @@
               {% endif %}
             </td>
             <td>{{ format_jst(estimate.created_at) }}</td>
+            <td>
+              {% if estimate.visitor_key %}
+                <code>{{ estimate.visitor_key }}</code>
+              {% else %}
+                <span class="text-secondary">なし</span>
+              {% endif %}
+            </td>
+            <td class="history-url-cell">
+              {% if estimate.referrer_url %}
+                <a href="{{ estimate.referrer_url }}" target="_blank" rel="noopener">{{ estimate.referrer_url }}</a>
+              {% else %}
+                <span class="text-secondary">なし</span>
+              {% endif %}
+            </td>
+            <td>
+              <dl class="history-step-list">
+                <div><dt>スタート</dt><dd>{{ format_jst(estimate.step_started_at) or "-" }}</dd></div>
+                <div><dt>端末</dt><dd>{{ format_jst(estimate.step_device_at) or "-" }}</dd></div>
+                <div><dt>パック</dt><dd>{{ format_jst(estimate.step_package_at) or "-" }}</dd></div>
+                <div><dt>機能追加</dt><dd>{{ format_jst(estimate.step_custom_at) or "-" }}</dd></div>
+                <div><dt>結果</dt><dd>{{ format_jst(estimate.step_result_at) or "-" }}</dd></div>
+              </dl>
+            </td>
+            <td>
+              {% if estimate.pdf_click_count %}
+                <strong>{{ estimate.pdf_click_count }}回</strong><br>
+                <small class="text-secondary">{{ format_jst(estimate.pdf_clicked_at) }}</small>
+              {% else %}
+                <span class="text-secondary">なし</span>
+              {% endif %}
+            </td>
           </tr>
         {% else %}
-          <tr><td colspan="6" class="text-center text-secondary py-5">見積り履歴はまだありません。</td></tr>
+          <tr><td colspan="10" class="text-center text-secondary py-5">見積り履歴はまだありません。</td></tr>
         {% endfor %}
       </tbody>
     </table>
