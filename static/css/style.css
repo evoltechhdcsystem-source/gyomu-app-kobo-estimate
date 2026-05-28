@@ -1066,6 +1066,7 @@ textarea.form-control {
 
 .inquiry-summary {
   top: 110px !important;
+  margin-bottom: 28px;
 }
 
 .inquiry-summary-visuals {
@@ -1169,7 +1170,9 @@ textarea.form-control {
   justify-content: center;
   width: 100%;
   min-height: 52px;
-  margin-top: 18px;
+  margin-top: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .inquiry-summary-items {
