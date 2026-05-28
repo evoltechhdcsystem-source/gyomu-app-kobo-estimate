@@ -255,7 +255,7 @@
               {{ back_label }}
             {% endif %}
           </a>
-          <button class="btn btn-outline-dark no-print" type="button" data-print-estimate>PDF出力</button>
+          <a class="btn btn-outline-dark no-print" href="{{ url_for('main.download_estimate_pdf', estimate_id=estimate.id) }}">PDFで保存</a>
         </div>
         {% if estimate.package_type != "カスタムパック" %}
           <div class="custom-estimate-cta">
@@ -278,16 +278,4 @@
     </div>
   </div>
 </section>
-{% endblock %}
-{% block scripts %}
-  <script>
-    document.querySelector("[data-print-estimate]")?.addEventListener("click", () => {
-      fetch("{{ url_for('main.record_pdf_click', estimate_id=estimate.id) }}", {
-        method: "POST",
-        headers: { "X-CSRFToken": "{{ csrf_token() }}" },
-        keepalive: true
-      }).catch(() => {});
-      window.print();
-    });
-  </script>
 {% endblock %}

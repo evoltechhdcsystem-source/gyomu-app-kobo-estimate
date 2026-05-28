@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from io import BytesIO
 from datetime import datetime
 
 from flask import (
@@ -11,9 +12,17 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     session,
     url_for,
 )
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from models import Estimate, EstimateItem, Inquiry, InquiryAttachment, db
 from services.box_service import allowed_file, upload_to_box
@@ -100,6 +109,140 @@ def _as_int(value, default: int = 0) -> int:
 
 def _now() -> datetime:
     return datetime.utcnow()
+
+
+def _pdf_paragraph(text: str, style: ParagraphStyle) -> Paragraph:
+    escaped = (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\n", "<br/>")
+    )
+    return Paragraph(escaped, style)
+
+
+def _register_pdf_fonts() -> None:
+    if "HeiseiKakuGo-W5" not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(UnicodeCIDFont("HeiseiKakuGo-W5"))
+
+
+def _estimate_pdf_items(estimate: Estimate) -> list[list[object]]:
+    rows: list[list[object]] = []
+    for item in estimate.items:
+        rows.append([estimate_item_label(item.item_name), f"{item.price:,}円"])
+    return rows
+
+
+def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
+    _register_pdf_fonts()
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=18 * mm,
+        leftMargin=18 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
+        title=f"estimate-{estimate.id}",
+    )
+    base = ParagraphStyle(
+        "Japanese",
+        fontName="HeiseiKakuGo-W5",
+        fontSize=10,
+        leading=15,
+        textColor=colors.HexColor("#1f2f37"),
+    )
+    title = ParagraphStyle(
+        "JapaneseTitle",
+        parent=base,
+        fontSize=20,
+        leading=26,
+        spaceAfter=8,
+    )
+    label = ParagraphStyle(
+        "JapaneseLabel",
+        parent=base,
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor("#4d5960"),
+    )
+
+    story: list[object] = [
+        _pdf_paragraph("概算見積書", title),
+        Spacer(1, 5 * mm),
+        Table(
+            [
+                [_pdf_paragraph("合計", label), _pdf_paragraph(f"{estimate.total_price:,}円", title)],
+                [_pdf_paragraph("利用端末", label), _pdf_paragraph(estimate.device_type, base)],
+                [_pdf_paragraph("パック", label), _pdf_paragraph(estimate.package_type, base)],
+            ],
+            colWidths=[32 * mm, 124 * mm],
+            style=TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, -1), "HeiseiKakuGo-W5"),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff8f2")),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#e5ddd4")),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#e5ddd4")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ]
+            ),
+        ),
+        Spacer(1, 9 * mm),
+        _pdf_paragraph("画面・機能の内容", ParagraphStyle("JapaneseSection", parent=base, fontSize=13, leading=18)),
+        Spacer(1, 3 * mm),
+    ]
+
+    item_rows = [[_pdf_paragraph("画面・機能", label), _pdf_paragraph("金額", label)]]
+    for name, price in _estimate_pdf_items(estimate):
+        item_rows.append([_pdf_paragraph(name, base), _pdf_paragraph(price, base)])
+    story.append(
+        Table(
+            item_rows,
+            colWidths=[118 * mm, 38 * mm],
+            repeatRows=1,
+            style=TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, -1), "HeiseiKakuGo-W5"),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f3ffd9")),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#d8e6c4")),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#d8e6c4")),
+                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ]
+            ),
+        )
+    )
+    story.extend(
+        [
+            Spacer(1, 9 * mm),
+            _pdf_paragraph("開発ツールライセンス", ParagraphStyle("JapaneseNoteHead", parent=base, fontSize=11, leading=16)),
+            _pdf_paragraph(
+                "業務アプリの作成・公開・運用基盤としてノーコードツール「Click」を利用します。"
+                "ご利用にはClick Proプラン（月額19,600円）の契約が別途必要です。"
+                "合計金額には加算していません。",
+                label,
+            ),
+        ]
+    )
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+
+def _record_pdf_click(estimate: Estimate) -> None:
+    if not estimate.pdf_clicked_at:
+        estimate.pdf_clicked_at = _now()
+    estimate.pdf_click_count = (estimate.pdf_click_count or 0) + 1
+    db.session.commit()
 
 
 def _capture_referrer(flow: dict) -> None:
@@ -496,11 +639,20 @@ def start_custom_from_estimate(estimate_id: int):
 @main_bp.post("/estimate/<int:estimate_id>/pdf-click")
 def record_pdf_click(estimate_id: int):
     estimate = Estimate.query.get_or_404(estimate_id)
-    if not estimate.pdf_clicked_at:
-        estimate.pdf_clicked_at = _now()
-    estimate.pdf_click_count = (estimate.pdf_click_count or 0) + 1
-    db.session.commit()
+    _record_pdf_click(estimate)
     return jsonify({"ok": True, "pdf_click_count": estimate.pdf_click_count})
+
+
+@main_bp.get("/estimate/<int:estimate_id>/pdf")
+def download_estimate_pdf(estimate_id: int):
+    estimate = Estimate.query.get_or_404(estimate_id)
+    _record_pdf_click(estimate)
+    return send_file(
+        _build_estimate_pdf(estimate),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"estimate-{estimate.id}.pdf",
+    )
 
 
 @main_bp.route("/inquiry/<int:estimate_id>", methods=["GET", "POST"])
