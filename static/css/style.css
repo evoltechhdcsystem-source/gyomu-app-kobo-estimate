@@ -802,6 +802,19 @@ main > section {
   min-width: 0;
 }
 
+.choice-visual-frame {
+  display: grid;
+  place-items: center;
+  width: min(230px, 100%);
+  aspect-ratio: 1 / 1;
+  justify-self: center;
+  overflow: hidden;
+  background: var(--soft);
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
 .device-choice-copy {
   display: grid;
   gap: 7px;
@@ -957,7 +970,7 @@ main > section {
 
 .privacy-mark-box {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 74px;
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
@@ -972,8 +985,17 @@ main > section {
   height: auto;
 }
 
+.privacy-mark-box a {
+  display: block;
+  grid-column: 2;
+  grid-row: 1;
+  width: fit-content;
+}
+
 .privacy-mark-box div {
   display: grid;
+  grid-column: 1;
+  grid-row: 1;
   gap: 3px;
 }
 
@@ -2408,7 +2430,7 @@ a.progress-step:hover {
   }
 
   .privacy-mark-box {
-    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 58px;
     gap: 12px;
   }
 

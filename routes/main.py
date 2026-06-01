@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 from io import BytesIO
+from pathlib import Path
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from flask import (
     Blueprint,
@@ -20,9 +22,10 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from models import Estimate, EstimateItem, Inquiry, InquiryAttachment, db
 from services.box_service import allowed_file, upload_to_box
@@ -141,6 +144,23 @@ def _estimate_pdf_items(estimate: Estimate) -> list[list[object]]:
     return rows
 
 
+def _estimate_pdf_logo() -> Image | None:
+    logo_path = Path(current_app.root_path) / "static" / "img" / "logo_evoltech.png"
+    if not logo_path.exists():
+        return None
+
+    image = Image(str(logo_path))
+    original_width, original_height = ImageReader(str(logo_path)).getSize()
+    image.drawWidth = 62 * mm
+    image.drawHeight = image.drawWidth * original_height / original_width
+    return image
+
+
+def _estimate_pdf_download_name() -> str:
+    timestamp = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d_%H%M")
+    return f"業務アプリ工房_{timestamp}.pdf"
+
+
 def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
     _register_pdf_fonts()
     buffer = BytesIO()
@@ -175,7 +195,12 @@ def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
         textColor=colors.HexColor("#4d5960"),
     )
 
-    story: list[object] = [
+    logo = _estimate_pdf_logo()
+    story: list[object] = []
+    if logo:
+        story.extend([logo, Spacer(1, 5 * mm)])
+
+    story.extend([
         _pdf_paragraph("概算見積書", title),
         Spacer(1, 5 * mm),
         Table(
@@ -202,7 +227,7 @@ def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
         Spacer(1, 9 * mm),
         _pdf_paragraph("画面・機能の内容", ParagraphStyle("JapaneseSection", parent=base, fontSize=13, leading=18)),
         Spacer(1, 3 * mm),
-    ]
+    ])
 
     item_rows = [[_pdf_paragraph("画面・機能", label), _pdf_paragraph("金額", label)]]
     for name, price in _estimate_pdf_items(estimate):
@@ -678,7 +703,7 @@ def download_estimate_pdf(estimate_id: int):
         _build_estimate_pdf(estimate),
         mimetype="application/pdf",
         as_attachment=True,
-        download_name=f"estimate-{estimate.id}.pdf",
+        download_name=_estimate_pdf_download_name(),
     )
 
 
