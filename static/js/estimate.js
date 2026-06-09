@@ -5,7 +5,7 @@ function setCurrentTotal(total) {
     element.textContent = `${estimateFormatter.format(total)}円`;
   });
   document.querySelectorAll("[data-estimate-total]").forEach((element) => {
-    element.textContent = `${estimateFormatter.format(total)}円`;
+    element.innerHTML = `${estimateFormatter.format(total)}円<span class="tax-note">（税抜）</span>`;
   });
 }
 
@@ -113,5 +113,84 @@ function bindCustomEstimate() {
   update();
 }
 
+function bindFeatureDetailModal() {
+  const modalElement = document.getElementById("featureDetailPopover");
+  const triggers = Array.from(document.querySelectorAll("[data-feature-detail-trigger]"));
+  if (!modalElement || !triggers.length) return;
+
+  const fields = {
+    name: modalElement.querySelector("[data-feature-modal-name]"),
+    price: modalElement.querySelector("[data-feature-modal-price]"),
+    condition: modalElement.querySelector("[data-feature-modal-condition]"),
+    description: modalElement.querySelector("[data-feature-modal-description]")
+  };
+  let activeTrigger = null;
+  let closeTimer = null;
+
+  function setText(element, value) {
+    if (element) element.textContent = value || "";
+  }
+
+  function showFor(trigger) {
+    activeTrigger = trigger;
+    window.clearTimeout(closeTimer);
+    setText(fields.name, trigger.dataset.featureName);
+    setText(fields.price, trigger.dataset.featurePrice);
+    setText(fields.condition, trigger.dataset.featureCondition);
+    setText(fields.description, trigger.dataset.featureDescription);
+    modalElement.hidden = false;
+    positionNearTrigger(trigger);
+  }
+
+  function positionNearTrigger(trigger) {
+    const gap = 10;
+    const rect = trigger.getBoundingClientRect();
+    const modalRect = modalElement.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
+    const left = Math.min(
+      Math.max(rect.left, gap),
+      viewportWidth - modalRect.width - gap
+    );
+    let top = rect.bottom + gap;
+    if (top + modalRect.height > viewportHeight - gap) {
+      top = Math.max(rect.top - modalRect.height - gap, gap);
+    }
+    modalElement.style.left = `${left}px`;
+    modalElement.style.top = `${top}px`;
+  }
+
+  function scheduleClose() {
+    window.clearTimeout(closeTimer);
+    closeTimer = window.setTimeout(() => {
+      if (activeTrigger?.matches(":hover") || modalElement.matches(":hover")) return;
+      modalElement.hidden = true;
+    }, 120);
+  }
+
+  triggers.forEach((trigger) => {
+    trigger.addEventListener("mousedown", (event) => event.stopPropagation());
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      showFor(trigger);
+    });
+    trigger.addEventListener("focus", () => showFor(trigger));
+    trigger.addEventListener("blur", scheduleClose);
+    trigger.addEventListener("mouseenter", () => showFor(trigger));
+    trigger.addEventListener("mouseleave", scheduleClose);
+  });
+
+  modalElement.addEventListener("mouseenter", () => window.clearTimeout(closeTimer));
+  modalElement.addEventListener("mouseleave", scheduleClose);
+  window.addEventListener("scroll", () => {
+    if (!modalElement.hidden && activeTrigger) positionNearTrigger(activeTrigger);
+  }, { passive: true });
+  window.addEventListener("resize", () => {
+    if (!modalElement.hidden && activeTrigger) positionNearTrigger(activeTrigger);
+  });
+}
+
 bindPackageEstimate();
 bindCustomEstimate();
+bindFeatureDetailModal();

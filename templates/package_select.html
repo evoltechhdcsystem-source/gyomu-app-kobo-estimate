@@ -15,7 +15,9 @@
     <div class="choice-grid three">
       <label class="choice-card package-card">
         <input type="radio" name="package_type" value="基本パック" data-screens="3" required>
-        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-basic-generated.png') }}" alt="基本パックのイメージ">
+        <div class="choice-visual-frame">
+          <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-basic-generated.png') }}" alt="基本パックのイメージ">
+        </div>
         <span class="choice-title">基本パック</span>
         <span class="choice-price">3画面</span>
         <small>まず小さく始めたい現場向け。</small>
@@ -31,7 +33,9 @@
       </label>
       <label class="choice-card package-card">
         <input type="radio" name="package_type" value="運用パック" data-screens="6" required>
-        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-operation-generated.png') }}" alt="運用パックのイメージ">
+        <div class="choice-visual-frame">
+          <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-operation-generated.png') }}" alt="運用パックのイメージ">
+        </div>
         <span class="choice-title">運用パック</span>
         <span class="choice-price">6画面</span>
         <small>毎日の業務でしっかり使いたい現場向け。</small>
@@ -48,7 +52,9 @@
       </label>
       <label class="choice-card package-card">
         <input type="radio" name="package_type" value="カスタムパック" data-screens="1" required>
-        <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-custom-generated.png') }}" alt="カスタムパックのイメージ">
+        <div class="choice-visual-frame">
+          <img class="package-choice-visual" src="{{ url_for('static', filename='img/package-custom-generated.png') }}" alt="カスタムパックのイメージ">
+        </div>
         <span class="choice-title">カスタムパック</span>
         <span class="choice-price">画面数・機能を指定</span>
         <small>自社のやり方に合わせて作りたい現場向け。</small>

@@ -5,12 +5,12 @@
   <section class="print-estimate-sheet" aria-label="PDF出力用の見積り書">
     <div class="print-estimate-head">
       <div>
-        <img class="print-estimate-logo" src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房">
+        <img class="print-estimate-logo" src="{{ url_for('static', filename='img/top-estimate-logo-factory.png') }}" alt="業務アプリ工房">
         <h1>概算見積り書</h1>
       </div>
       <div class="print-estimate-total">
         <span>合計</span>
-        <strong>{{ "{:,}".format(estimate.total_price) }}円</strong>
+        <strong>{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></strong>
       </div>
     </div>
 
@@ -32,6 +32,7 @@
           <tr>
             <th>画面・機能</th>
             {% if estimate.package_type == "カスタムパック" %}
+              <th>条件</th>
               <th>金額</th>
             {% endif %}
           </tr>
@@ -56,6 +57,7 @@
                     <strong>{{ estimate_item_label(item.item_name) }}</strong>
                     <small>選択した端末タイプと画面数に合わせて、入力・一覧・詳細などの画面を作成します。</small>
                   </td>
+                  <td>{{ estimate_item_condition(item.item_name, estimate.device_type) }}</td>
                   <td>{{ "{:,}".format(item.price) }}円</td>
                 </tr>
               {% else %}
@@ -65,6 +67,7 @@
                     <strong>{{ estimate_item_label(item.item_name) }}</strong>
                     <small>{{ feature_descriptions.get(feature_name, "業務に合わせて必要な機能を追加します。") }}</small>
                   </td>
+                  <td>{{ estimate_item_condition(item.item_name, estimate.device_type) }}</td>
                   <td>{{ "{:,}".format(item.price) }}円</td>
                 </tr>
               {% endif %}
@@ -88,7 +91,7 @@
 
   <section class="print-flyer-sheet" aria-label="業務アプリ工房の紹介">
     <div class="print-flyer-hero">
-      <img src="{{ url_for('static', filename='img/top-estimate-logo-transparent.png') }}" alt="業務アプリ工房">
+      <img src="{{ url_for('static', filename='img/top-estimate-logo-factory.png') }}" alt="業務アプリ工房">
       <p>毎日の業務に合わせて、使いやすいアプリをすばやく形にします。</p>
     </div>
 
@@ -118,7 +121,7 @@
 
     <div class="print-flyer-cta">
       <strong>詳しいサービス内容はこちら</strong>
-      <span>https://gyomu-app-kobo.com/</span>
+      <span>https://gyomu-app-kobo.netlify.app/</span>
     </div>
   </section>
 
@@ -196,6 +199,7 @@
           {% elif estimate.package_type == "カスタムパック" %}
             <div class="result-item-head has-price">
               <span>画面・機能</span>
+              <span>条件</span>
               <span>金額</span>
             </div>
             {% for item in estimate.items %}
@@ -205,12 +209,17 @@
                     <strong class="result-item-title">{{ estimate_item_label(item.item_name) }}</strong>
                     <small>選択した端末タイプと画面数に合わせて、入力・一覧・詳細などの画面を作成します。</small>
                   </span>
+                  <small class="result-item-condition">
+                    {{ estimate_item_condition(item.item_name, estimate.device_type) }}
+                    <button class="parts-definition-button" type="button" data-bs-toggle="modal" data-bs-target="#partsDefinitionModal">パーツとは？</button>
+                  </small>
                 {% else %}
                   {% set feature_name = estimate_feature_name(item.item_name) %}
                   <span>
                     <strong class="result-item-title">{{ estimate_item_label(item.item_name) }}</strong>
                     <small>{{ feature_descriptions.get(feature_name, "業務に合わせて必要な機能を追加します。") }}</small>
                   </span>
+                  <small class="result-item-condition">{{ estimate_item_condition(item.item_name, estimate.device_type) }}</small>
                 {% endif %}
                 <strong>{{ "{:,}".format(item.price) }}円</strong>
               </div>
@@ -238,7 +247,7 @@
     <div class="col-lg-4">
       <div class="summary-panel result-side">
         <div class="small text-secondary">合計</div>
-        <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円</div>
+        <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></div>
         <div class="included-work-note">
           <div class="small text-secondary">本見積りに含まれる作業</div>
           <ul>
@@ -278,14 +287,18 @@
         {% endif %}
         <div class="result-inquiry-cta">
           <p class="result-inquiry-lead">今使っている帳票を見せてください<br>詳細なお見積りを致します</p>
-          <a class="btn btn-primary" href="{{ url_for('main.inquiry', estimate_id=estimate.id) }}">問合せ、詳細お見積りへ進む</a>
+          <a class="btn btn-primary result-inquiry-button" href="{{ url_for('main.inquiry', estimate_id=estimate.id) }}">
+            <span>問合せ</span>
+            <span>詳細お見積りへ進む</span>
+          </a>
         </div>
-        <a class="service-detail-link result-service-link" href="https://gyomu-app-kobo.com/" target="_blank" rel="noopener">
-          <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房">
+        <a class="service-detail-link result-service-link" href="https://gyomu-app-kobo.netlify.app/" target="_blank" rel="noopener">
           <span>詳しいサービス内容はこちら</span>
+          <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房">
         </a>
       </div>
     </div>
   </div>
 </section>
+{% include "_parts_modal.html" %}
 {% endblock %}

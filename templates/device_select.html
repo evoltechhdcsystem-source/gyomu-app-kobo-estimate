@@ -17,6 +17,7 @@
           <input type="radio" name="device_type" value="{{ name }}" required>
           <div class="device-choice-layout">
             <div class="device-choice-media">
+              <div class="choice-visual-frame">
               {% if name == "タブレット" %}
                 <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-tablet-generated.png') }}" alt="タブレット向け">
               {% elif name == "スマートフォン" %}
@@ -24,6 +25,7 @@
               {% else %}
                 <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-all-generated.png') }}" alt="スマートフォン・タブレット・PCの3タイプ対応">
               {% endif %}
+              </div>
             </div>
             <div class="device-choice-copy">
               <span class="choice-title">{{ name }}</span>

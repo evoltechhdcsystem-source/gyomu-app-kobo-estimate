@@ -82,15 +82,15 @@
           <span>小さく始めてあとから機能追加</span>
           <span>公開後の修正や運用も見据えて設計</span>
         </div>
-        <a class="service-detail-link result-service-link inquiry-service-site-link" href="https://gyomu-app-kobo.com/" target="_blank" rel="noopener">
-          <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房">
+        <a class="service-detail-link result-service-link inquiry-service-site-link" href="https://gyomu-app-kobo.netlify.app/" target="_blank" rel="noopener">
           <span>詳しいサービス内容はこちら</span>
+          <img src="{{ url_for('static', filename='img/logo_evoltech.png') }}" alt="業務アプリ工房">
         </a>
       </div>
 
       <div class="summary-panel inquiry-summary sticky-lg-top">
         <div class="small text-secondary">送信される見積り</div>
-        <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円</div>
+        <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></div>
         <div class="inquiry-summary-visuals">
           <div class="inquiry-summary-card">
             {% if estimate.device_type == "タブレット" %}

@@ -31,10 +31,13 @@ from models import Estimate, EstimateItem, Inquiry, InquiryAttachment, db
 from services.box_service import allowed_file, upload_to_box
 from services.estimate_service import (
     DEVICE_PRICES,
+    FEATURE_CONDITIONS,
     FEATURE_PRICES,
     MULTIPLE_FEATURES,
     PACKAGE_SCREENS,
+    SCREEN_PARTS_CONDITION,
     calculate_estimate,
+    feature_prices_for_device,
 )
 from services.mail_service import send_inquiry_mails
 
@@ -47,20 +50,22 @@ STEP_FIELDS = {
     "result": "step_result_at",
 }
 FEATURE_DESCRIPTIONS = {
+    "画面表示項目追加": "1画面内に表示・入力できる項目数を増やします。",
     "データ登録": "新しい情報を入力フォームから追加できます。",
     "データ編集": "登録済みの情報をあとから修正できます。",
     "データ検索": "条件を指定して必要な情報を探せます。",
     "データ削除": "不要な情報を削除できます。",
     "メール送信": "通知や受付内容をメールで送信できます。",
     "マスターテーブル": "商品・顧客・分類などの基本データを管理できます。",
-    "kintone連携": "kintoneとデータを連携できます。",
-    "決済機能": "クレジットカード等の支払い機能を追加できます。",
+    "kintone連携": "別途kintone Standard以上のライセンスが必要です。",
     "AI API連携": "AIによる文章作成・要約・判定などを追加できます。",
-    "ストア申請代行": "アプリ公開に必要な申請作業を代行します。",
+    "App Store / Google Play公開申請代行": "アプリ公開に必要な申請作業を代行します。",
     "操作マニュアル": "利用者向けの操作説明書を作成します。",
     "ユーザーログイン": "利用者ごとにログインして使えるようにします。",
+    "アプリ作成相談": "どんなアプリを作ればいいかなどのご相談を承ります。",
 }
 FEATURE_ICON_FILES = {
+    "画面表示項目追加": "feature-table.svg",
     "データ登録": "feature-add.svg",
     "データ編集": "feature-edit.svg",
     "データ検索": "feature-search.svg",
@@ -68,11 +73,11 @@ FEATURE_ICON_FILES = {
     "メール送信": "feature-mail.svg",
     "マスターテーブル": "feature-table.svg",
     "kintone連携": "feature-link.svg",
-    "決済機能": "feature-payment.svg",
     "AI API連携": "feature-ai.svg",
-    "ストア申請代行": "feature-store.svg",
+    "App Store / Google Play公開申請代行": "feature-store.svg",
     "操作マニュアル": "feature-manual.svg",
     "ユーザーログイン": "feature-login.svg",
+    "アプリ作成相談": "feature-manual.svg",
 }
 SCREEN_DESCRIPTIONS = {
     "データ登録画面": "新しい情報を入力して保存するための画面です。",
@@ -84,6 +89,7 @@ SCREEN_DESCRIPTIONS = {
 }
 INCLUDED_WORK_ITEMS = [
     "画面・機能確認のお打ち合わせ 2時間まで",
+    "1画面内のパーツは20個まで",
     "アプリの設計・制作",
     "開発環境 Click の契約サポート",
     "仮納品後の微調整",
@@ -92,11 +98,24 @@ INCLUDED_WORK_ITEMS = [
 
 
 def estimate_item_label(item_name: str) -> str:
-    return item_name.replace(" 画面単価 x ", " x ")
+    return (
+        item_name
+        .replace(" 画面単価 x ", " x ")
+        .replace("kintoneのデータベースと連携する(1DB)", "kintone連携")
+        .replace("ストア申請代行", "App Store / Google Play公開申請代行")
+        .replace("アプリ作成コンサル", "アプリ作成相談")
+    )
 
 
 def estimate_feature_name(item_name: str) -> str:
-    return item_name.split(" x ", 1)[0]
+    feature_name = item_name.split(" x ", 1)[0]
+    if feature_name == "kintoneのデータベースと連携する(1DB)":
+        return "kintone連携"
+    if feature_name == "アプリ作成コンサル":
+        return "アプリ作成相談"
+    if feature_name == "ストア申請代行":
+        return "App Store / Google Play公開申請代行"
+    return feature_name
 
 
 def estimate_screen_count(item_name: str) -> int:
@@ -108,6 +127,12 @@ def estimate_screen_count(item_name: str) -> int:
 
 def is_screen_count_item(item_name: str, device_type: str) -> bool:
     return item_name.startswith(device_type) and "画面" in item_name
+
+
+def estimate_item_condition(item_name: str, device_type: str) -> str:
+    if is_screen_count_item(item_name, device_type):
+        return SCREEN_PARTS_CONDITION
+    return FEATURE_CONDITIONS.get(estimate_feature_name(item_name), "")
 
 
 def _as_int(value, default: int = 0) -> int:
@@ -140,12 +165,18 @@ def _register_pdf_fonts() -> None:
 def _estimate_pdf_items(estimate: Estimate) -> list[list[object]]:
     rows: list[list[object]] = []
     for item in estimate.items:
-        rows.append([estimate_item_label(item.item_name), f"{item.price:,}円"])
+        rows.append(
+            [
+                estimate_item_label(item.item_name),
+                estimate_item_condition(item.item_name, estimate.device_type),
+                f"{item.price:,}円",
+            ]
+        )
     return rows
 
 
 def _estimate_pdf_logo() -> Image | None:
-    logo_path = Path(current_app.root_path) / "static" / "img" / "logo_evoltech.png"
+    logo_path = Path(current_app.root_path) / "static" / "img" / "top-estimate-logo-factory.png"
     if not logo_path.exists():
         return None
 
@@ -205,7 +236,7 @@ def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
         Spacer(1, 5 * mm),
         Table(
             [
-                [_pdf_paragraph("合計", label), _pdf_paragraph(f"{estimate.total_price:,}円", title)],
+                [_pdf_paragraph("合計", label), _pdf_paragraph(f"{estimate.total_price:,}円（税抜）", title)],
                 [_pdf_paragraph("利用端末", label), _pdf_paragraph(estimate.device_type, base)],
                 [_pdf_paragraph("パック", label), _pdf_paragraph(estimate.package_type, base)],
             ],
@@ -229,13 +260,21 @@ def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
         Spacer(1, 3 * mm),
     ])
 
-    item_rows = [[_pdf_paragraph("画面・機能", label), _pdf_paragraph("金額", label)]]
-    for name, price in _estimate_pdf_items(estimate):
-        item_rows.append([_pdf_paragraph(name, base), _pdf_paragraph(price, base)])
+    item_rows = [
+        [
+            _pdf_paragraph("画面・機能", label),
+            _pdf_paragraph("条件", label),
+            _pdf_paragraph("金額", label),
+        ]
+    ]
+    for name, condition, price in _estimate_pdf_items(estimate):
+        item_rows.append(
+            [_pdf_paragraph(name, base), _pdf_paragraph(condition, base), _pdf_paragraph(price, base)]
+        )
     story.append(
         Table(
             item_rows,
-            colWidths=[118 * mm, 38 * mm],
+            colWidths=[72 * mm, 52 * mm, 32 * mm],
             repeatRows=1,
             style=TableStyle(
                 [
@@ -243,7 +282,7 @@ def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f3ffd9")),
                     ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#d8e6c4")),
                     ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#d8e6c4")),
-                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                    ("ALIGN", (2, 0), (2, -1), "RIGHT"),
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
                     ("LEFTPADDING", (0, 0), (-1, -1), 8),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
@@ -585,8 +624,9 @@ def custom_estimate():
     if request.method == "GET":
         return render_template(
             "custom_estimate.html",
-            feature_prices=FEATURE_PRICES,
+            feature_prices=feature_prices_for_device(flow["device_type"]),
             feature_descriptions=FEATURE_DESCRIPTIONS,
+            feature_conditions=FEATURE_CONDITIONS,
             feature_icon_files=FEATURE_ICON_FILES,
             multiple_feature_names=MULTIPLE_FEATURES,
             device_prices=DEVICE_PRICES,
@@ -599,8 +639,9 @@ def custom_estimate():
         flash("画面数を入力してください。1以上の数字で入力すると見積りできます。", "danger")
         return render_template(
             "custom_estimate.html",
-            feature_prices=FEATURE_PRICES,
+            feature_prices=feature_prices_for_device(flow["device_type"]),
             feature_descriptions=FEATURE_DESCRIPTIONS,
+            feature_conditions=FEATURE_CONDITIONS,
             feature_icon_files=FEATURE_ICON_FILES,
             multiple_feature_names=MULTIPLE_FEATURES,
             device_prices=DEVICE_PRICES,
@@ -608,7 +649,9 @@ def custom_estimate():
             estimate_status=_estimate_status("custom", flow),
         ), 400
 
-    selected_features = request.form.getlist("features")
+    selected_features = [
+        feature for feature in request.form.getlist("features") if feature in FEATURE_PRICES
+    ]
     feature_quantities = {}
     for feature in selected_features:
         quantity = _as_int(request.form.get(f"feature_quantities[{feature}]"), 1)
@@ -622,8 +665,9 @@ def custom_estimate():
         session["estimate_flow"] = flow
         return render_template(
             "custom_estimate.html",
-            feature_prices=FEATURE_PRICES,
+            feature_prices=feature_prices_for_device(flow["device_type"]),
             feature_descriptions=FEATURE_DESCRIPTIONS,
+            feature_conditions=FEATURE_CONDITIONS,
             feature_icon_files=FEATURE_ICON_FILES,
             multiple_feature_names=MULTIPLE_FEATURES,
             device_prices=DEVICE_PRICES,
@@ -668,8 +712,10 @@ def estimate_result(estimate_id: int):
         back_label=back_labels.get(back_endpoint, "前の画面へ戻る"),
         estimate_item_label=estimate_item_label,
         estimate_feature_name=estimate_feature_name,
+        estimate_item_condition=estimate_item_condition,
         is_screen_count_item=is_screen_count_item,
         feature_descriptions=FEATURE_DESCRIPTIONS,
+        feature_conditions=FEATURE_CONDITIONS,
         screen_descriptions=SCREEN_DESCRIPTIONS,
     )
 

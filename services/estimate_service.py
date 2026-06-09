@@ -13,6 +13,7 @@ PACKAGE_SCREENS = {
 }
 
 FEATURE_PRICES = {
+    "画面表示項目追加": 10000,
     "データ登録": 20000,
     "データ編集": 15000,
     "データ検索": 15000,
@@ -20,14 +21,15 @@ FEATURE_PRICES = {
     "メール送信": 10000,
     "マスターテーブル": 10000,
     "kintone連携": 10000,
-    "決済機能": 10000,
     "AI API連携": 10000,
-    "ストア申請代行": 30000,
+    "App Store / Google Play公開申請代行": 50000,
     "操作マニュアル": 10000,
     "ユーザーログイン": 30000,
+    "アプリ作成相談": 2000,
 }
 
 MULTIPLE_FEATURES = {
+    "画面表示項目追加",
     "データ登録",
     "データ編集",
     "データ検索",
@@ -36,7 +38,37 @@ MULTIPLE_FEATURES = {
     "マスターテーブル",
     "kintone連携",
     "AI API連携",
+    "アプリ作成相談",
 }
+
+SCREEN_PARTS_CONDITION = "1画面内のパーツ20個まで"
+FEATURE_CONDITIONS = {
+    "画面表示項目追加": "1画面内のパーツ+20個",
+    "データ登録": "実績テーブル作成とデータ追加機能",
+    "データ編集": "データの更新機能",
+    "データ検索": "複数条件でのデータ検索",
+    "データ削除": "確認画面付き",
+    "メール送信": "指定の1アドレスにメール送信",
+    "マスターテーブル": "マスターデータを管理するテーブルを1つ作成",
+    "kintone連携": "kintoneのデータベース1つと連携",
+    "AI API連携": "AI API 1機能分の連携",
+    "App Store / Google Play公開申請代行": "App StoreかGoogle Playのどちらかに公開",
+    "操作マニュアル": "基本操作マニュアルの作成",
+    "ユーザーログイン": "ユーザー認証機能の追加",
+    "アプリ作成相談": "アプリ作成の打ち合わせ2時間は基本の料金に含まれます",
+}
+
+
+def feature_unit_price(feature: str, device_type: str) -> int:
+    if feature == "画面表示項目追加":
+        return DEVICE_PRICES.get(device_type, FEATURE_PRICES[feature])
+    return FEATURE_PRICES.get(feature, 0)
+
+
+def feature_prices_for_device(device_type: str) -> dict[str, int]:
+    prices = dict(FEATURE_PRICES)
+    prices["画面表示項目追加"] = feature_unit_price("画面表示項目追加", device_type)
+    return prices
 
 
 def calculate_estimate(
@@ -64,7 +96,9 @@ def calculate_estimate(
         quantity = max(int(feature_quantities.get(feature, 1) or 1), 1)
         if feature not in MULTIPLE_FEATURES:
             quantity = 1
-        unit_price = FEATURE_PRICES.get(feature, 0)
+        if feature not in FEATURE_PRICES:
+            continue
+        unit_price = feature_unit_price(feature, device_type)
         name = f"{feature} x {quantity}" if quantity > 1 else feature
         items.append({"name": name, "price": unit_price * quantity})
 

@@ -6,6 +6,7 @@
     <div>
       <p class="eyebrow">Step 3</p>
       <h1>画面数と追加機能を選択</h1>
+      <p>作成したいアプリに必要な画面数を入力し、追加したい機能を選んでください。画面数は入力・一覧・詳細・編集など、利用者が切り替えて使う画面ごとに数えます。</p>
     </div>
   </div>
 
@@ -38,6 +39,10 @@
       <div class="custom-screen-head">
         <span class="choice-title">画面数</span>
         <span class="choice-price">{{ "{:,}".format(device_prices[flow.device_type]) }}円 / 画面</span>
+        <span class="screen-parts-limit">
+          1画面内のパーツは20個まで
+          <button class="parts-definition-button" type="button" data-bs-toggle="modal" data-bs-target="#partsDefinitionModal">パーツとは？</button>
+        </span>
       </div>
       <div class="screen-input">
         <input class="form-control" id="custom_screens" name="custom_screens" type="number" min="1" max="50" value="{{ flow.custom_screens|default(1) }}" required>
@@ -57,9 +62,18 @@
             <span class="feature-copy">
               <strong class="feature-name">{{ name }}</strong>
               <small><span class="help-icon" aria-hidden="true">?</span>{{ feature_descriptions.get(name, "この機能を追加できます。") }}</small>
+              <button
+                class="feature-detail-button"
+                type="button"
+                data-feature-detail-trigger
+                data-feature-name="{{ name }}"
+                data-feature-price="{{ "{:,}".format(price) }}円"
+                data-feature-description="{{ feature_descriptions.get(name, "この機能を追加できます。") }}"
+                data-feature-condition="{{ feature_conditions.get(name, "内容により個別確認") }}"
+              >条件・詳細</button>
             </span>
             <span class="feature-price">
-              <strong>{{ "{:,}".format(price) }}円{% if name == "決済機能" %}〜{% endif %}</strong>
+              <strong>{{ "{:,}".format(price) }}円</strong>
               {% if name in multiple_feature_names %}
                 <span class="feature-quantity">
                   <span>数量</span>
@@ -85,7 +99,7 @@
       <span class="price-formula-symbol" aria-hidden="true">=</span>
       <div>
         <span>現在の見積り金額</span>
-        <strong data-estimate-total>{{ "{:,}".format(estimate_status.total_price) }}円</strong>
+        <strong data-estimate-total>{{ "{:,}".format(estimate_status.total_price) }}円<span class="tax-note">（税抜）</span></strong>
       </div>
     </div>
 
@@ -95,6 +109,24 @@
     </div>
   </form>
 </section>
+{% include "_parts_modal.html" %}
+<div class="feature-detail-popover" id="featureDetailPopover" role="dialog" aria-labelledby="featureDetailPopoverLabel" hidden>
+  <h2 id="featureDetailPopoverLabel" data-feature-modal-name></h2>
+  <dl class="feature-detail-list">
+    <div>
+      <dt>料金</dt>
+      <dd data-feature-modal-price></dd>
+    </div>
+    <div>
+      <dt>条件</dt>
+      <dd data-feature-modal-condition></dd>
+    </div>
+    <div>
+      <dt>詳細</dt>
+      <dd data-feature-modal-description></dd>
+    </div>
+  </dl>
+</div>
 {% endblock %}
 {% block scripts %}
   <script>
