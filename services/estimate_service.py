@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 DEVICE_PRICES = {
-    "タブレット": 10000,
     "スマートフォン": 10000,
+    "PC": 10000,
     "スマートフォン・タブレット・PCの3タイプ対応": 15000,
 }
 
@@ -10,6 +10,18 @@ PACKAGE_SCREENS = {
     "基本パック": 3,
     "運用パック": 6,
     "カスタムパック": 0,
+}
+
+BASIC_PACKAGE_PRICES = {
+    "スマートフォン": 75000,
+    "PC": 75000,
+    "スマートフォン・タブレット・PCの3タイプ対応": 90000,
+}
+
+OPERATION_PACKAGE_PRICES = {
+    "スマートフォン": 165000,
+    "PC": 105000,
+    "スマートフォン・タブレット・PCの3タイプ対応": 195000,
 }
 
 FEATURE_PRICES = {
@@ -71,6 +83,17 @@ def feature_prices_for_device(device_type: str) -> dict[str, int]:
     return prices
 
 
+def package_base_price(package_type: str, device_type: str) -> int | None:
+    screen_unit_price = DEVICE_PRICES.get(device_type, 0)
+    if package_type == "基本パック":
+        return 90000 if screen_unit_price == 15000 else 75000
+    if package_type == "運用パック":
+        if device_type == "スマートフォン":
+            return 165000
+        return 195000 if screen_unit_price == 15000 else 105000
+    return None
+
+
 def calculate_estimate(
     device_type: str,
     package_type: str,
@@ -84,7 +107,9 @@ def calculate_estimate(
     screen_count = (
         custom_screens if package_type == "カスタムパック" else PACKAGE_SCREENS.get(package_type, 0)
     )
-    screen_total = screen_unit_price * max(screen_count, 0)
+    screen_total = package_base_price(package_type, device_type)
+    if screen_total is None:
+        screen_total = screen_unit_price * max(screen_count, 0)
 
     items = [
         {

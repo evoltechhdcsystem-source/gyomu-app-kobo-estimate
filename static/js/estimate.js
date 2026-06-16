@@ -26,6 +26,8 @@ function bindPackageEstimate() {
   if (!form) return;
 
   const unitPrice = Number(window.estimateConfig?.unitPrice || 0);
+  const basicPackagePrice = Number(window.estimateConfig?.basicPackagePrice || 0);
+  const operationPackagePrice = Number(window.estimateConfig?.operationPackagePrice || 0);
 
   function update() {
     const selected = form.querySelector('input[name="package_type"]:checked');
@@ -35,7 +37,13 @@ function bindPackageEstimate() {
     }
 
     const screens = Number(selected.dataset.screens || 0);
-    setCurrentTotal(unitPrice * screens);
+    let total = unitPrice * screens;
+    if (selected.value === "基本パック" && basicPackagePrice > 0) {
+      total = basicPackagePrice;
+    } else if (selected.value === "運用パック" && operationPackagePrice > 0) {
+      total = operationPackagePrice;
+    }
+    setCurrentTotal(total);
   }
 
   form.addEventListener("change", update);

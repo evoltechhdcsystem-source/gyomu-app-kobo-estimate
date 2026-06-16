@@ -18,8 +18,8 @@
           <div class="device-choice-layout">
             <div class="device-choice-media">
               <div class="choice-visual-frame">
-              {% if name == "タブレット" %}
-                <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-tablet-generated.png') }}" alt="タブレット向け">
+              {% if name == "PC" %}
+                <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-pc-generated.png') }}" alt="PC向け">
               {% elif name == "スマートフォン" %}
                 <img class="device-choice-visual" src="{{ url_for('static', filename='img/device-smartphone-generated.png') }}" alt="スマートフォン向け">
               {% else %}
@@ -30,16 +30,16 @@
             <div class="device-choice-copy">
               <span class="choice-title">{{ name }}</span>
               <span class="choice-price">{{ "{:,}".format(price) }}円 / 画面</span>
-              {% if name == "タブレット" %}
+              {% if name == "PC" %}
                 <div class="choice-detail">
                   <strong>向いている使い方</strong>
                   <ul>
-                    <li>現場で見ながら入力する</li>
-                    <li>画面を大きめに見たい</li>
-                    <li>点検表やチェック表を扱う</li>
+                    <li>事務所や管理部門で入力する</li>
+                    <li>一覧や集計を大きな画面で確認する</li>
+                    <li>キーボードで効率よく作業する</li>
                   </ul>
                 </div>
-                <p class="choice-example">例: 設備点検、検品記録、工程チェックなど</p>
+                <p class="choice-example">例: 顧客管理、在庫管理、帳票入力、集計確認など</p>
               {% elif name == "スマートフォン" %}
                 <div class="choice-detail">
                   <strong>向いている使い方</strong>

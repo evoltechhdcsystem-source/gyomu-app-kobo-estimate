@@ -30,14 +30,17 @@ from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Tabl
 from models import Estimate, EstimateItem, Inquiry, InquiryAttachment, db
 from services.box_service import allowed_file, upload_to_box
 from services.estimate_service import (
+    BASIC_PACKAGE_PRICES,
     DEVICE_PRICES,
     FEATURE_CONDITIONS,
     FEATURE_PRICES,
     MULTIPLE_FEATURES,
+    OPERATION_PACKAGE_PRICES,
     PACKAGE_SCREENS,
     SCREEN_PARTS_CONDITION,
     calculate_estimate,
     feature_prices_for_device,
+    package_base_price,
 )
 from services.mail_service import send_inquiry_mails
 
@@ -86,6 +89,13 @@ SCREEN_DESCRIPTIONS = {
     "検索・絞り込み機能": "条件を指定して、必要な情報だけをすばやく見つけられます。",
     "データ修正画面": "登録済みの情報をあとから変更・更新できます。",
     "集計・状況確認画面": "件数や状態を集計し、業務の状況を把握しやすくします。",
+    "データ登録機能": "業務データを入力して保存できます。",
+    "データ検索機能": "条件を指定して必要なデータを検索できます。",
+    "データ編集機能": "登録済みの業務データを更新できます。",
+    "データ削除機能": "不要になった業務データを削除できます。",
+    "データ登録機能（マスター）": "マスターデータを入力して保存できます。",
+    "データ編集機能（マスター）": "登録済みのマスターデータを更新できます。",
+    "データ削除機能（マスター）": "不要になったマスターデータを削除できます。",
 }
 INCLUDED_WORK_ITEMS = [
     "画面・機能確認のお打ち合わせ 2時間まで",
@@ -584,6 +594,9 @@ def package_select():
         return render_template(
             "package_select.html",
             package_screens=PACKAGE_SCREENS,
+            basic_package_prices=BASIC_PACKAGE_PRICES,
+            operation_package_prices=OPERATION_PACKAGE_PRICES,
+            package_base_price=package_base_price,
             device_prices=DEVICE_PRICES,
             flow=flow,
             estimate_status=_estimate_status("package", flow),
@@ -595,6 +608,9 @@ def package_select():
         return render_template(
             "package_select.html",
             package_screens=PACKAGE_SCREENS,
+            basic_package_prices=BASIC_PACKAGE_PRICES,
+            operation_package_prices=OPERATION_PACKAGE_PRICES,
+            package_base_price=package_base_price,
             device_prices=DEVICE_PRICES,
             flow=flow,
             estimate_status=_estimate_status("package", flow),

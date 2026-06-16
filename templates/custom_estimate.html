@@ -14,8 +14,8 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="selected-estimate-visuals">
       <div class="selected-estimate-card">
-        {% if flow.device_type == "タブレット" %}
-          <img src="{{ url_for('static', filename='img/device-tablet-generated.png') }}" alt="タブレット向け">
+        {% if flow.device_type == "PC" %}
+          <img src="{{ url_for('static', filename='img/device-pc-generated.png') }}" alt="PC向け">
         {% elif flow.device_type == "スマートフォン" %}
           <img src="{{ url_for('static', filename='img/device-smartphone-generated.png') }}" alt="スマートフォン向け">
         {% else %}

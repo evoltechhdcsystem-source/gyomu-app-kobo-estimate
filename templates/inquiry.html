@@ -93,8 +93,8 @@
         <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></div>
         <div class="inquiry-summary-visuals">
           <div class="inquiry-summary-card">
-            {% if estimate.device_type == "タブレット" %}
-              <img src="{{ url_for('static', filename='img/device-tablet-generated.png') }}" alt="タブレット向け">
+            {% if estimate.device_type == "PC" %}
+              <img src="{{ url_for('static', filename='img/device-pc-generated.png') }}" alt="PC向け">
             {% elif estimate.device_type == "スマートフォン" %}
               <img src="{{ url_for('static', filename='img/device-smartphone-generated.png') }}" alt="スマートフォン向け">
             {% else %}
@@ -126,12 +126,13 @@
             <span>データ一覧画面</span>
             <span>データ詳細画面</span>
           {% elif estimate.package_type == "運用パック" %}
-            <span>データ登録画面</span>
-            <span>データ一覧画面</span>
-            <span>データ詳細画面</span>
-            <span>検索・絞り込み機能</span>
-            <span>データ修正画面</span>
-            <span>集計・状況確認画面</span>
+            <span>データ登録機能</span>
+            <span>データ検索機能</span>
+            <span>データ編集機能</span>
+            <span>データ削除機能</span>
+            <span>データ登録機能（マスター）</span>
+            <span>データ編集機能（マスター）</span>
+            <span>データ削除機能（マスター）</span>
           {% elif estimate.package_type == "カスタムパック" %}
             {% for item in estimate.items %}
               <span class="inquiry-summary-item">

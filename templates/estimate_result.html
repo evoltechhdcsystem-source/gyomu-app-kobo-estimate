@@ -43,12 +43,13 @@
             <tr><td>データ一覧画面</td></tr>
             <tr><td>データ詳細画面</td></tr>
           {% elif estimate.package_type == "運用パック" %}
-            <tr><td>データ登録画面</td></tr>
-            <tr><td>データ一覧画面</td></tr>
-            <tr><td>データ詳細画面</td></tr>
-            <tr><td>検索・絞り込み機能</td></tr>
-            <tr><td>データ修正画面</td></tr>
-            <tr><td>集計・状況確認画面</td></tr>
+            <tr><td>データ登録機能</td></tr>
+            <tr><td>データ検索機能</td></tr>
+            <tr><td>データ編集機能</td></tr>
+            <tr><td>データ削除機能</td></tr>
+            <tr><td>データ登録機能（マスター）</td></tr>
+            <tr><td>データ編集機能（マスター）</td></tr>
+            <tr><td>データ削除機能（マスター）</td></tr>
           {% elif estimate.package_type == "カスタムパック" %}
             {% for item in estimate.items %}
               {% if is_screen_count_item(item.item_name, estimate.device_type) %}
@@ -144,8 +145,8 @@
 
         <div class="selected-estimate-visuals">
           <div class="selected-estimate-card">
-            {% if estimate.device_type == "タブレット" %}
-              <img src="{{ url_for('static', filename='img/device-tablet-generated.png') }}" alt="タブレット向け">
+            {% if estimate.device_type == "PC" %}
+              <img src="{{ url_for('static', filename='img/device-pc-generated.png') }}" alt="PC向け">
             {% elif estimate.device_type == "スマートフォン" %}
               <img src="{{ url_for('static', filename='img/device-smartphone-generated.png') }}" alt="スマートフォン向け">
             {% else %}
@@ -188,7 +189,7 @@
             <div class="result-item-head">
               <span>画面・機能</span>
             </div>
-            {% for name in ["データ登録画面", "データ一覧画面", "データ詳細画面", "検索・絞り込み機能", "データ修正画面", "集計・状況確認画面"] %}
+            {% for name in ["データ登録機能", "データ検索機能", "データ編集機能", "データ削除機能", "データ登録機能（マスター）", "データ編集機能（マスター）", "データ削除機能（マスター）"] %}
               <div class="result-item-row">
                 <span>
                   <strong class="result-item-title">{{ name }}</strong>

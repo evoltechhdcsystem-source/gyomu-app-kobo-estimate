@@ -54,7 +54,7 @@ function messageForField(field) {
   if (field.name === "device_type") {
     return {
       title: "端末を選ぶと次へ進めます",
-      detail: "タブレット、スマートフォン、3タイプ対応の中から1つ選択してください。"
+      detail: "スマートフォン、PC、3タイプ対応の中から1つ選択してください。"
     };
   }
   if (field.name === "package_type") {

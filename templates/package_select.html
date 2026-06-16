@@ -42,10 +42,13 @@
         <div class="package-detail">
           <strong>入っている内容</strong>
           <ul>
-            <li>登録・一覧・詳細画面</li>
-            <li>検索や絞り込み</li>
-            <li>修正画面</li>
-            <li>集計や状況確認の画面</li>
+            <li>データ登録機能</li>
+            <li>データ検索機能</li>
+            <li>データ編集機能</li>
+            <li>データ削除機能</li>
+            <li>データ登録機能（マスター）</li>
+            <li>データ編集機能（マスター）</li>
+            <li>データ削除機能（マスター）</li>
           </ul>
         </div>
         <p class="package-example">例: 在庫管理、不良記録、出荷確認、工程の進み具合確認など</p>
@@ -81,6 +84,8 @@
   <script>
     window.estimateConfig = {
       unitPrice: {{ device_prices[flow.device_type] }},
+      basicPackagePrice: {{ package_base_price("基本パック", flow.device_type) }},
+      operationPackagePrice: {{ package_base_price("運用パック", flow.device_type) }},
       customDefaultScreens: 1
     };
   </script>
