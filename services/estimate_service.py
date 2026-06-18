@@ -12,18 +12,6 @@ PACKAGE_SCREENS = {
     "カスタムパック": 0,
 }
 
-BASIC_PACKAGE_PRICES = {
-    "スマートフォン": 75000,
-    "PC": 75000,
-    "スマートフォン・タブレット・PCの3タイプ対応": 90000,
-}
-
-OPERATION_PACKAGE_PRICES = {
-    "スマートフォン": 165000,
-    "PC": 105000,
-    "スマートフォン・タブレット・PCの3タイプ対応": 195000,
-}
-
 FEATURE_PRICES = {
     "画面表示項目追加": 10000,
     "データ登録": 20000,
@@ -35,7 +23,7 @@ FEATURE_PRICES = {
     "kintone連携": 10000,
     "AI API連携": 10000,
     "App Store / Google Play公開申請代行": 50000,
-    "操作マニュアル": 10000,
+    "ユーザー操作マニュアル": 5000,
     "ユーザーログイン": 30000,
     "アプリ作成相談": 2000,
 }
@@ -50,6 +38,7 @@ MULTIPLE_FEATURES = {
     "マスターテーブル",
     "kintone連携",
     "AI API連携",
+    "ユーザー操作マニュアル",
     "アプリ作成相談",
 }
 
@@ -65,10 +54,39 @@ FEATURE_CONDITIONS = {
     "kintone連携": "kintoneのデータベース1つと連携",
     "AI API連携": "AI API 1機能分の連携",
     "App Store / Google Play公開申請代行": "App StoreかGoogle Playのどちらかに公開",
-    "操作マニュアル": "基本操作マニュアルの作成",
+    "ユーザー操作マニュアル": "1画面あたりの操作マニュアル作成",
     "ユーザーログイン": "ユーザー認証機能の追加",
     "アプリ作成相談": "アプリ作成の打ち合わせ2時間は基本の料金に含まれます",
 }
+
+PACKAGE_FEATURE_QUANTITIES = {
+    "基本パック": {
+        "データ登録": 1,
+        "データ編集": 1,
+        "データ削除": 1,
+    },
+    "運用パック": {
+        "データ登録": 2,
+        "データ編集": 2,
+        "データ削除": 2,
+        "データ検索": 1,
+    },
+}
+
+
+def package_feature_quantities(package_type: str) -> dict[str, int]:
+    return dict(PACKAGE_FEATURE_QUANTITIES.get(package_type, {}))
+
+
+def package_features(package_type: str) -> list[str]:
+    return list(package_feature_quantities(package_type))
+
+
+def package_feature_total(package_type: str, device_type: str) -> int:
+    return sum(
+        feature_unit_price(feature, device_type) * quantity
+        for feature, quantity in package_feature_quantities(package_type).items()
+    )
 
 
 def feature_unit_price(feature: str, device_type: str) -> int:
@@ -83,17 +101,6 @@ def feature_prices_for_device(device_type: str) -> dict[str, int]:
     return prices
 
 
-def package_base_price(package_type: str, device_type: str) -> int | None:
-    screen_unit_price = DEVICE_PRICES.get(device_type, 0)
-    if package_type == "基本パック":
-        return 90000 if screen_unit_price == 15000 else 75000
-    if package_type == "運用パック":
-        if device_type == "スマートフォン":
-            return 165000
-        return 195000 if screen_unit_price == 15000 else 105000
-    return None
-
-
 def calculate_estimate(
     device_type: str,
     package_type: str,
@@ -101,15 +108,17 @@ def calculate_estimate(
     selected_features: list[str] | None = None,
     feature_quantities: dict[str, int] | None = None,
 ) -> dict:
-    selected_features = selected_features or []
-    feature_quantities = feature_quantities or {}
+    if package_type == "カスタムパック":
+        selected_features = selected_features or []
+        feature_quantities = feature_quantities or {}
+    else:
+        feature_quantities = package_feature_quantities(package_type)
+        selected_features = list(feature_quantities)
     screen_unit_price = DEVICE_PRICES.get(device_type, 0)
     screen_count = (
         custom_screens if package_type == "カスタムパック" else PACKAGE_SCREENS.get(package_type, 0)
     )
-    screen_total = package_base_price(package_type, device_type)
-    if screen_total is None:
-        screen_total = screen_unit_price * max(screen_count, 0)
+    screen_total = screen_unit_price * max(screen_count, 0)
 
     items = [
         {

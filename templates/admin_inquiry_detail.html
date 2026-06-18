@@ -52,8 +52,14 @@
         <h2>添付ファイル</h2>
         {% for attachment in inquiry.attachments %}
           <div class="attachment-row">
-            <span>{{ attachment.file_name }}</span>
-            <small>{{ attachment.box_url }}</small>
+            <div class="attachment-field">
+              <span class="attachment-label">画面表示名</span>
+              <span>{{ attachment.file_name }}</span>
+            </div>
+            <div class="attachment-field">
+              <span class="attachment-label">保存先</span>
+              <small>{{ attachment.box_url }}</small>
+            </div>
           </div>
         {% else %}
           <p class="text-secondary mb-0">添付ファイルはありません。</p>

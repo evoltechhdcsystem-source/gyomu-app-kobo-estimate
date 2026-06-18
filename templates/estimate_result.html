@@ -39,17 +39,17 @@
         </thead>
         <tbody>
           {% if estimate.package_type == "基本パック" %}
-            <tr><td>データ登録画面</td></tr>
-            <tr><td>データ一覧画面</td></tr>
-            <tr><td>データ詳細画面</td></tr>
+            <tr><td>記録を入力する画面 / データ登録機能</td></tr>
+            <tr><td>入力した記録を一覧で見る画面</td></tr>
+            <tr><td>記録の詳しい内容を見る画面 / データ編集機能・データ削除機能</td></tr>
           {% elif estimate.package_type == "運用パック" %}
-            <tr><td>データ登録機能</td></tr>
-            <tr><td>データ検索機能</td></tr>
-            <tr><td>データ編集機能</td></tr>
-            <tr><td>データ削除機能</td></tr>
-            <tr><td>データ登録機能（マスター）</td></tr>
-            <tr><td>データ編集機能（マスター）</td></tr>
-            <tr><td>データ削除機能（マスター）</td></tr>
+            <tr><td>通常利用: 記録を入力する画面 / データ登録機能</td></tr>
+            <tr><td>通常利用: 入力した記録を一覧で見る画面</td></tr>
+            <tr><td>通常利用: 入力した記録の検索画面 / データ検索機能</td></tr>
+            <tr><td>通常利用: 記録の詳しい内容を見る画面 / データ編集機能・データ削除機能</td></tr>
+            <tr><td>管理者向け: 管理用の情報を入力する画面 / データ登録機能</td></tr>
+            <tr><td>管理者向け: 管理用の情報を一覧で見る画面</td></tr>
+            <tr><td>管理者向け: 管理用の情報の詳しい内容を見る画面 / データ編集機能・データ削除機能</td></tr>
           {% elif estimate.package_type == "カスタムパック" %}
             {% for item in estimate.items %}
               {% if is_screen_count_item(item.item_name, estimate.device_type) %}
@@ -83,10 +83,18 @@
     </div>
 
     <div class="print-estimate-note">
-      <strong>開発ツールライセンス</strong>
-      <span>業務アプリの作成・公開・運用基盤として、ノーコードツール「Click」を利用します。</span>
-      <span>ご利用にはClick Proプラン（月額 19,600円）の契約が別途必要です。</span>
-      <small>※合計金額には加算していません。</small>
+      <div class="print-estimate-note-item">
+        <strong>開発ツールライセンス</strong>
+        <span>業務アプリの作成・公開・運用基盤として、ノーコードツール「Click」を利用します。</span>
+        <span>ご利用にはClick Proプラン（月額 19,600円）の契約が別途必要です。</span>
+        <small>合計金額には加算していません。</small>
+      </div>
+      <div class="print-estimate-note-item">
+        <strong>外部AIサービス利用料</strong>
+        <span>OpenAI API等の外部AIサービスを利用する場合、</span>
+        <span>その利用料は別途お客様のご負担となります。</span>
+        <small>合計金額には加算していません。</small>
+      </div>
     </div>
   </section>
 
@@ -174,29 +182,78 @@
 
         <div class="result-item-list">
           {% if estimate.package_type == "基本パック" %}
-            <div class="result-item-head">
-              <span>画面・機能</span>
-            </div>
-            {% for name in ["データ登録画面", "データ一覧画面", "データ詳細画面"] %}
-              <div class="result-item-row">
-                <span>
-                  <strong class="result-item-title">{{ name }}</strong>
-                  <small>{{ screen_descriptions[name] }}</small>
-                </span>
+            <div class="package-feature-table result-package-feature-table" role="table" aria-label="基本パックの画面と付属機能">
+              <div class="package-feature-row package-feature-row-head" role="row">
+                <div role="columnheader">画面</div>
+                <div role="columnheader">付属機能</div>
               </div>
-            {% endfor %}
+              <div class="package-feature-row" role="row">
+                <div role="cell">記録を入力する画面</div>
+                <div role="cell">
+                  <span class="package-feature-chip is-create">データ登録機能</span>
+                </div>
+              </div>
+              <div class="package-feature-row" role="row">
+                <div role="cell">入力した記録を一覧で見る画面</div>
+                <div role="cell"></div>
+              </div>
+              <div class="package-feature-row" role="row">
+                <div role="cell">記録の詳しい内容を見る画面</div>
+                <div role="cell">
+                  <span class="package-feature-chip is-edit">データ編集機能</span>
+                  <span class="package-feature-chip is-delete">データ削除機能</span>
+                </div>
+              </div>
+            </div>
           {% elif estimate.package_type == "運用パック" %}
-            <div class="result-item-head">
-              <span>画面・機能</span>
-            </div>
-            {% for name in ["データ登録機能", "データ検索機能", "データ編集機能", "データ削除機能", "データ登録機能（マスター）", "データ編集機能（マスター）", "データ削除機能（マスター）"] %}
-              <div class="result-item-row">
-                <span>
-                  <strong class="result-item-title">{{ name }}</strong>
-                  <small>{{ screen_descriptions[name] }}</small>
-                </span>
+            <div class="package-feature-table result-package-feature-table" role="table" aria-label="運用パックの画面と付属機能">
+              <div class="package-feature-row package-feature-row-head" role="row">
+                <div role="columnheader">画面</div>
+                <div role="columnheader">付属機能</div>
               </div>
-            {% endfor %}
+              <div class="package-feature-section" role="rowgroup">通常利用</div>
+              <div class="package-feature-row" role="row">
+                <div role="cell">記録を入力する画面</div>
+                <div role="cell">
+                  <span class="package-feature-chip is-create">データ登録機能</span>
+                </div>
+              </div>
+              <div class="package-feature-row" role="row">
+                <div role="cell">入力した記録を一覧で見る画面</div>
+                <div role="cell"></div>
+              </div>
+              <div class="package-feature-row" role="row">
+                <div role="cell">入力した記録の検索画面</div>
+                <div role="cell">
+                  <span class="package-feature-chip is-search">データ検索機能</span>
+                </div>
+              </div>
+              <div class="package-feature-row" role="row">
+                <div role="cell">記録の詳しい内容を見る画面</div>
+                <div role="cell">
+                  <span class="package-feature-chip is-edit">データ編集機能</span>
+                  <span class="package-feature-chip is-delete">データ削除機能</span>
+                </div>
+              </div>
+              <div class="package-feature-section" role="rowgroup">管理者向け</div>
+              <div class="package-feature-row" role="row">
+                <div role="cell">管理用の情報を入力する画面</div>
+                <div role="cell">
+                  <span class="package-feature-chip is-create">データ登録機能</span>
+                </div>
+              </div>
+              <div class="package-feature-row" role="row">
+                <div role="cell">管理用の情報を一覧で見る画面</div>
+                <div role="cell"></div>
+              </div>
+              <div class="package-feature-row" role="row">
+                <div role="cell">管理用の情報の詳しい内容を見る画面</div>
+                <div role="cell">
+                  <span class="package-feature-chip is-edit">データ編集機能</span>
+                  <span class="package-feature-chip is-delete">データ削除機能</span>
+                </div>
+              </div>
+            </div>
           {% elif estimate.package_type == "カスタムパック" %}
             <div class="result-item-head has-price">
               <span>画面・機能</span>
@@ -260,12 +317,21 @@
           </ul>
         </div>
         <div class="license-note">
-          <div class="small text-secondary">開発ツールライセンス</div>
-          <strong>ノーコードツール「Click」</strong>
-          <span>業務アプリの作成・公開・運用基盤として利用します。</span>
-          <span>ご利用にはClick Proプラン（月額 19,600円）の契約が別途必要です。</span>
-          <a href="https://click.dev/" target="_blank" rel="noopener">https://click.dev/</a>
-          <small>※合計金額には加算していません。</small>
+          <div class="license-note-item">
+            <div class="small text-secondary">開発ツールライセンス</div>
+            <strong>ノーコードツール「Click」</strong>
+            <span>業務アプリの作成・公開・運用基盤として利用します。</span>
+            <span>ご利用にはClick Proプラン（月額 19,600円）の契約が別途必要です。</span>
+            <a class="click-official-link" href="https://click.dev/" target="_blank" rel="noopener">詳しくはこちら（Click公式サイト）</a>
+            <small>合計金額には加算していません。</small>
+          </div>
+          <div class="license-note-item">
+            <div class="small text-secondary">外部AIサービス利用料</div>
+            <strong>OpenAI API等の利用料</strong>
+            <span>外部AIサービスを利用する場合、</span>
+            <span>その利用料は別途お客様のご負担となります。</span>
+            <small>合計金額には加算していません。</small>
+          </div>
         </div>
         <div class="result-actions">
           <a class="btn btn-outline-dark" href="{{ back_url }}">

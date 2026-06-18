@@ -1,12 +1,26 @@
 <div class="modal fade" id="partsDefinitionModal" tabindex="-1" aria-labelledby="partsDefinitionModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content parts-modal-content">
       <div class="modal-header">
-        <h2 class="modal-title fs-5" id="partsDefinitionModalLabel">パーツの定義</h2>
+        <h2 class="modal-title fs-5" id="partsDefinitionModalLabel">パーツとは？</h2>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
       </div>
       <div class="modal-body">
-        <p>パーツの定義は後ほど追記します。</p>
+        <div class="parts-definition-copy">
+          <p>
+            パーツとは、画面を作るための部品です。<br>
+            ラベル、入力欄、チェックボックス、ボタンなどを組み合わせて、1つの画面を作ります。
+          </p>
+          <p>
+            1画面あたり20パーツまでを基本の範囲としています。<br>
+            20パーツを超える画面を作成したい場合は、追加機能から「画面表示項目追加」を選択してください。
+          </p>
+        </div>
+        <img
+          class="parts-definition-image"
+          src="{{ url_for('static', filename='img/parts-definition-explanation.png') }}"
+          alt="報告書作成画面の各パーツに番号を付けて説明した図"
+        >
       </div>
     </div>
   </div>

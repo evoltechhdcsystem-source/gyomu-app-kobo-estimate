@@ -121,30 +121,12 @@
         </div>
         <div class="inquiry-summary-items">
           <strong>見積り項目</strong>
-          {% if estimate.package_type == "基本パック" %}
-            <span>データ登録画面</span>
-            <span>データ一覧画面</span>
-            <span>データ詳細画面</span>
-          {% elif estimate.package_type == "運用パック" %}
-            <span>データ登録機能</span>
-            <span>データ検索機能</span>
-            <span>データ編集機能</span>
-            <span>データ削除機能</span>
-            <span>データ登録機能（マスター）</span>
-            <span>データ編集機能（マスター）</span>
-            <span>データ削除機能（マスター）</span>
-          {% elif estimate.package_type == "カスタムパック" %}
-            {% for item in estimate.items %}
-              <span class="inquiry-summary-item">
-                <span>{{ estimate_item_label(item.item_name) }}</span>
-                <strong>{{ "{:,}".format(item.price) }}円</strong>
-              </span>
-            {% endfor %}
-          {% else %}
-            {% for item in estimate.items %}
+          {% for item in estimate.items %}
+            <span class="inquiry-summary-item">
               <span>{{ estimate_item_label(item.item_name) }}</span>
-            {% endfor %}
-          {% endif %}
+              <strong>{{ "{:,}".format(item.price) }}円</strong>
+            </span>
+          {% endfor %}
         </div>
       </div>
 

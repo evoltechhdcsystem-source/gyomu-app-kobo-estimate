@@ -31,7 +31,7 @@
             <td>#{{ estimate.id }}</td>
             <td>{{ estimate.device_type }}</td>
             <td>
-              {% if estimate.package_type == "カスタムパック" and estimate.items|length > 1 %}
+              {% if estimate.items|length > 1 %}
                 <details class="estimate-items-detail">
                   <summary>{{ estimate.package_type }}</summary>
                   <ul>

@@ -30,17 +30,17 @@ from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Tabl
 from models import Estimate, EstimateItem, Inquiry, InquiryAttachment, db
 from services.box_service import allowed_file, upload_to_box
 from services.estimate_service import (
-    BASIC_PACKAGE_PRICES,
     DEVICE_PRICES,
     FEATURE_CONDITIONS,
     FEATURE_PRICES,
     MULTIPLE_FEATURES,
-    OPERATION_PACKAGE_PRICES,
     PACKAGE_SCREENS,
     SCREEN_PARTS_CONDITION,
     calculate_estimate,
     feature_prices_for_device,
-    package_base_price,
+    package_feature_total,
+    package_feature_quantities,
+    package_features,
 )
 from services.mail_service import send_inquiry_mails
 
@@ -61,9 +61,9 @@ FEATURE_DESCRIPTIONS = {
     "メール送信": "通知や受付内容をメールで送信できます。",
     "マスターテーブル": "商品・顧客・分類などの基本データを管理できます。",
     "kintone連携": "別途kintone Standard以上のライセンスが必要です。",
-    "AI API連携": "AIによる文章作成・要約・判定などを追加できます。",
+    "AI API連携": "AIによる文章作成、要約、判定などを追加できます。外部AIサービスの利用料は別途必要です。",
     "App Store / Google Play公開申請代行": "アプリ公開に必要な申請作業を代行します。",
-    "操作マニュアル": "利用者向けの操作説明書を作成します。",
+    "ユーザー操作マニュアル": "利用者向けの操作説明書を作成します。1画面あたりの料金です。",
     "ユーザーログイン": "利用者ごとにログインして使えるようにします。",
     "アプリ作成相談": "どんなアプリを作ればいいかなどのご相談を承ります。",
 }
@@ -78,7 +78,7 @@ FEATURE_ICON_FILES = {
     "kintone連携": "feature-link.svg",
     "AI API連携": "feature-ai.svg",
     "App Store / Google Play公開申請代行": "feature-store.svg",
-    "操作マニュアル": "feature-manual.svg",
+    "ユーザー操作マニュアル": "feature-manual.svg",
     "ユーザーログイン": "feature-login.svg",
     "アプリ作成相談": "feature-manual.svg",
 }
@@ -114,6 +114,7 @@ def estimate_item_label(item_name: str) -> str:
         .replace("kintoneのデータベースと連携する(1DB)", "kintone連携")
         .replace("ストア申請代行", "App Store / Google Play公開申請代行")
         .replace("アプリ作成コンサル", "アプリ作成相談")
+        .replace("操作マニュアル", "ユーザー操作マニュアル")
     )
 
 
@@ -125,6 +126,8 @@ def estimate_feature_name(item_name: str) -> str:
         return "アプリ作成相談"
     if feature_name == "ストア申請代行":
         return "App Store / Google Play公開申請代行"
+    if feature_name == "操作マニュアル":
+        return "ユーザー操作マニュアル"
     return feature_name
 
 
@@ -197,6 +200,21 @@ def _estimate_pdf_logo() -> Image | None:
     return image
 
 
+def _estimate_pdf_company_info(style: ParagraphStyle, name_style: ParagraphStyle) -> list[object]:
+    lines = [
+        ("name", current_app.config.get("COMPANY_NAME", "")),
+        ("text", current_app.config.get("COMPANY_ADDRESS", "")),
+        ("text", f"TEL {current_app.config.get('COMPANY_PHONE', '')}" if current_app.config.get("COMPANY_PHONE") else ""),
+        ("text", current_app.config.get("COMPANY_EMAIL", "")),
+    ]
+    info: list[object] = []
+    for line_type, text in lines:
+        if not text:
+            continue
+        info.append(_pdf_paragraph(text, name_style if line_type == "name" else style))
+    return info
+
+
 def _estimate_pdf_download_name() -> str:
     timestamp = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d_%H%M")
     return f"業務アプリ工房_{timestamp}.pdf"
@@ -235,15 +253,49 @@ def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
         leading=13,
         textColor=colors.HexColor("#4d5960"),
     )
+    company = ParagraphStyle(
+        "JapaneseCompany",
+        parent=base,
+        fontSize=8,
+        leading=11,
+        alignment=2,
+        textColor=colors.HexColor("#4d5960"),
+    )
+    company_name = ParagraphStyle(
+        "JapaneseCompanyName",
+        parent=company,
+        fontSize=10,
+        leading=13,
+        textColor=colors.HexColor("#1f2f37"),
+    )
 
     logo = _estimate_pdf_logo()
     story: list[object] = []
+    header_left: list[object] = []
     if logo:
-        story.extend([logo, Spacer(1, 5 * mm)])
+        header_left.extend([logo, Spacer(1, 4 * mm)])
+    header_left.append(_pdf_paragraph("概算見積書", title))
+    story.extend(
+        [
+            Table(
+                [[header_left, _estimate_pdf_company_info(company, company_name)]],
+                colWidths=[86 * mm, 70 * mm],
+                style=TableStyle(
+                    [
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                        ("TOPPADDING", (0, 0), (-1, -1), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ]
+                ),
+            ),
+            Spacer(1, 5 * mm),
+        ]
+    )
 
     story.extend([
-        _pdf_paragraph("概算見積書", title),
-        Spacer(1, 5 * mm),
         Table(
             [
                 [_pdf_paragraph("合計", label), _pdf_paragraph(f"{estimate.total_price:,}円（税抜）", title)],
@@ -329,6 +381,13 @@ def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
             _pdf_paragraph(
                 "業務アプリの作成・公開・運用基盤としてノーコードツール「Click」を利用します。"
                 "ご利用にはClick Proプラン（月額19,600円）の契約が別途必要です。"
+                "合計金額には加算していません。",
+                label,
+            ),
+            Spacer(1, 4 * mm),
+            _pdf_paragraph("外部AIサービス利用料", ParagraphStyle("JapaneseAiNoteHead", parent=base, fontSize=11, leading=16)),
+            _pdf_paragraph(
+                "OpenAI API等の外部AIサービスを利用する場合、その利用料は別途お客様のご負担となります。\n"
                 "合計金額には加算していません。",
                 label,
             ),
@@ -594,9 +653,7 @@ def package_select():
         return render_template(
             "package_select.html",
             package_screens=PACKAGE_SCREENS,
-            basic_package_prices=BASIC_PACKAGE_PRICES,
-            operation_package_prices=OPERATION_PACKAGE_PRICES,
-            package_base_price=package_base_price,
+            package_feature_total=package_feature_total,
             device_prices=DEVICE_PRICES,
             flow=flow,
             estimate_status=_estimate_status("package", flow),
@@ -608,15 +665,18 @@ def package_select():
         return render_template(
             "package_select.html",
             package_screens=PACKAGE_SCREENS,
-            basic_package_prices=BASIC_PACKAGE_PRICES,
-            operation_package_prices=OPERATION_PACKAGE_PRICES,
-            package_base_price=package_base_price,
+            package_feature_total=package_feature_total,
             device_prices=DEVICE_PRICES,
             flow=flow,
             estimate_status=_estimate_status("package", flow),
         ), 400
 
+    previous_package_type = flow.get("package_type")
+    if previous_package_type != package_type:
+        flow.pop("custom_screens", None)
     flow["package_type"] = package_type
+    flow["features"] = package_features(package_type)
+    flow["feature_quantities"] = package_feature_quantities(package_type)
     estimate = _ensure_flow_estimate(flow)
     estimate.device_type = flow["device_type"]
     estimate.package_type = package_type

@@ -71,6 +71,19 @@ def create_app() -> Flask:
         ADMIN_PASSWORD=os.getenv("ADMIN_PASSWORD", "Evoltech999"),
         MAIL_FROM=os.getenv("MAIL_FROM", "no-reply@example.com"),
         MAIL_TO=os.getenv("MAIL_TO", "sales@example.com"),
+        SMTP_HOST=os.getenv("SMTP_HOST", ""),
+        SMTP_PORT=int(os.getenv("SMTP_PORT", "587")),
+        SMTP_USERNAME=os.getenv("SMTP_USERNAME", ""),
+        SMTP_PASSWORD=os.getenv("SMTP_PASSWORD", ""),
+        SMTP_USE_TLS=os.getenv("SMTP_USE_TLS", "true").lower() in {"1", "true", "yes", "on"},
+        SMTP_USE_SSL=os.getenv("SMTP_USE_SSL", "false").lower() in {"1", "true", "yes", "on"},
+        COMPANY_NAME=os.getenv("COMPANY_NAME", "エボルテック株式会社浜松開発センター"),
+        COMPANY_ADDRESS=os.getenv(
+            "COMPANY_ADDRESS",
+            "〒435-0042 静岡県浜松市中央区篠ケ瀬町32",
+        ),
+        COMPANY_PHONE=os.getenv("COMPANY_PHONE", "053-401-6201"),
+        COMPANY_EMAIL=os.getenv("COMPANY_EMAIL") or os.getenv("MAIL_TO") or "katayama-y@evoltech.co.jp",
     )
 
     db.init_app(app)

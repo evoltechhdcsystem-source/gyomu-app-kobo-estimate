@@ -22,11 +22,14 @@
         <span class="choice-price">3画面</span>
         <small>まず小さく始めたい現場向け。</small>
         <div class="package-detail">
-          <strong>入っている内容</strong>
+          <div class="package-detail-head">
+            <strong>入っている内容</strong>
+            <button class="package-feature-button" type="button" data-bs-toggle="modal" data-bs-target="#basicPackageFeaturesModal">付属機能</button>
+          </div>
           <ul>
             <li>記録を入力する画面</li>
-            <li>記録の一覧を見る画面</li>
-            <li>記録の詳細を確認する画面</li>
+            <li>入力した記録を一覧で見る画面</li>
+            <li>記録の詳しい内容を見る画面</li>
           </ul>
         </div>
         <p class="package-example">例: 作業日報、設備点検、検品記録など</p>
@@ -40,15 +43,19 @@
         <span class="choice-price">6画面</span>
         <small>毎日の業務でしっかり使いたい現場向け。</small>
         <div class="package-detail">
-          <strong>入っている内容</strong>
+          <div class="package-detail-head">
+            <strong>入っている内容</strong>
+            <button class="package-feature-button" type="button" data-bs-toggle="modal" data-bs-target="#operationPackageFeaturesModal">付属機能</button>
+          </div>
           <ul>
-            <li>データ登録機能</li>
-            <li>データ検索機能</li>
-            <li>データ編集機能</li>
-            <li>データ削除機能</li>
-            <li>データ登録機能（マスター）</li>
-            <li>データ編集機能（マスター）</li>
-            <li>データ削除機能（マスター）</li>
+            <li class="package-detail-section">通常利用</li>
+            <li>記録を入力する画面</li>
+            <li>入力した記録を一覧で見る画面</li>
+            <li>記録の詳しい内容を見る画面</li>
+            <li class="package-detail-section">管理者向け</li>
+            <li>管理用の情報を入力する画面</li>
+            <li>管理用の情報を一覧で見る画面</li>
+            <li>管理用の情報の詳しい内容を見る画面</li>
           </ul>
         </div>
         <p class="package-example">例: 在庫管理、不良記録、出荷確認、工程の進み具合確認など</p>
@@ -79,13 +86,17 @@
     </div>
   </form>
 </section>
+{% include "_package_features_modal.html" %}
 {% endblock %}
 {% block scripts %}
   <script>
     window.estimateConfig = {
       unitPrice: {{ device_prices[flow.device_type] }},
-      basicPackagePrice: {{ package_base_price("基本パック", flow.device_type) }},
-      operationPackagePrice: {{ package_base_price("運用パック", flow.device_type) }},
+      packageFeatureTotals: {
+        "基本パック": {{ package_feature_total("基本パック", flow.device_type) }},
+        "運用パック": {{ package_feature_total("運用パック", flow.device_type) }},
+        "カスタムパック": 0
+      },
       customDefaultScreens: 1
     };
   </script>
