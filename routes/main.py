@@ -565,7 +565,7 @@ def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
             _pdf_paragraph("開発ツールライセンス", ParagraphStyle("JapaneseNoteHead", parent=base, fontSize=10, leading=13)),
             _pdf_paragraph(
                 "業務アプリの作成・公開・運用基盤としてノーコードツール「Click」を利用します。"
-                "ご利用にはClick Proプラン（月額19,600円）の契約が別途必要です。"
+                "ご利用にはClick Standardプラン以上（月額4,400円～）の契約が別途必要です。"
                 "合計金額には加算していません。",
                 label,
             ),
