@@ -77,6 +77,13 @@ def create_app() -> Flask:
         SMTP_PASSWORD=os.getenv("SMTP_PASSWORD", ""),
         SMTP_USE_TLS=os.getenv("SMTP_USE_TLS", "true").lower() in {"1", "true", "yes", "on"},
         SMTP_USE_SSL=os.getenv("SMTP_USE_SSL", "false").lower() in {"1", "true", "yes", "on"},
+        LINEWORKS_WEBHOOK_URL=os.getenv("LINEWORKS_WEBHOOK_URL", ""),
+        LINEWORKS_WEBHOOK_BEARER_TOKEN=os.getenv("LINEWORKS_WEBHOOK_BEARER_TOKEN", ""),
+        LINEWORKS_WEBHOOK_TITLE=os.getenv("LINEWORKS_WEBHOOK_TITLE", "詳細見積り依頼"),
+        LINEWORKS_WEBHOOK_PAYLOAD_STYLE=os.getenv("LINEWORKS_WEBHOOK_PAYLOAD_STYLE", "text"),
+        LINEWORKS_WEBHOOK_TIMEOUT=int(os.getenv("LINEWORKS_WEBHOOK_TIMEOUT", "10")),
+        PUBLIC_BASE_URL=os.getenv("PUBLIC_BASE_URL", ""),
+        LINEWORKS_ADMIN_BASE_URL=os.getenv("LINEWORKS_ADMIN_BASE_URL", ""),
         COMPANY_NAME=os.getenv("COMPANY_NAME", "エボルテック株式会社 浜松開発センター"),
         COMPANY_ADDRESS=os.getenv(
             "COMPANY_ADDRESS",

@@ -43,6 +43,7 @@ from services.estimate_service import (
     package_features,
 )
 from services.mail_service import send_inquiry_mails
+from services.lineworks_service import send_lineworks_webhook_notification
 
 main_bp = Blueprint("main", __name__)
 STEP_FIELDS = {
@@ -1084,4 +1085,5 @@ def inquiry(estimate_id: int):
 
     db.session.commit()
     send_inquiry_mails(inquiry_record)
+    send_lineworks_webhook_notification(inquiry_record)
     return render_template("thanks.html", inquiry=inquiry_record)
