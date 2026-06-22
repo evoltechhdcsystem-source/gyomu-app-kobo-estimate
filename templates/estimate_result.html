@@ -149,6 +149,9 @@
             <h2>画面・機能の内容</h2>
             <p>作成する画面や機能の役割です。</p>
           </div>
+          {% if estimate.package_type in ["基本パック", "運用パック"] %}
+            <button class="parts-definition-button result-parts-definition-button" type="button" data-bs-toggle="modal" data-bs-target="#partsDefinitionModal">パーツとは？</button>
+          {% endif %}
         </div>
 
         <div class="selected-estimate-visuals">

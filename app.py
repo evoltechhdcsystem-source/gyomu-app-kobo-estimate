@@ -77,7 +77,7 @@ def create_app() -> Flask:
         SMTP_PASSWORD=os.getenv("SMTP_PASSWORD", ""),
         SMTP_USE_TLS=os.getenv("SMTP_USE_TLS", "true").lower() in {"1", "true", "yes", "on"},
         SMTP_USE_SSL=os.getenv("SMTP_USE_SSL", "false").lower() in {"1", "true", "yes", "on"},
-        COMPANY_NAME=os.getenv("COMPANY_NAME", "エボルテック株式会社浜松開発センター"),
+        COMPANY_NAME=os.getenv("COMPANY_NAME", "エボルテック株式会社 浜松開発センター"),
         COMPANY_ADDRESS=os.getenv(
             "COMPANY_ADDRESS",
             "〒435-0042 静岡県浜松市中央区篠ケ瀬町32",

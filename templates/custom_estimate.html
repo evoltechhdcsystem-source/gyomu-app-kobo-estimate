@@ -5,7 +5,10 @@
   <div class="wizard-head">
     <div>
       <p class="eyebrow">Step 3</p>
-      <h1>画面数と追加機能を選択</h1>
+      <div class="wizard-title-row">
+        <h1>画面数と追加機能を選択</h1>
+        <button class="feature-guide-button" type="button" data-bs-toggle="modal" data-bs-target="#featureGuideModal">選び方の例</button>
+      </div>
       <p>作成したいアプリに必要な画面数を入力し、追加したい機能を選んでください。画面数は入力・一覧・詳細・編集など、利用者が切り替えて使う画面ごとに数えます。</p>
     </div>
   </div>
@@ -54,34 +57,41 @@
       <div class="custom-feature-head">
         <h2>追加機能</h2>
       </div>
-      <div class="feature-grid">
-        {% for name, price in feature_prices.items() %}
-          <label class="feature-row">
-            <input class="form-check-input" type="checkbox" name="features" value="{{ name }}" data-price="{{ price }}" data-quantity-enabled="{{ 'true' if name in multiple_feature_names else 'false' }}" {% if name in flow.features|default([]) %}checked{% endif %}>
-            <img class="feature-point-icon" src="{{ url_for('static', filename='img/' ~ feature_icon_files.get(name, 'feature-add.svg')) }}" alt="">
-            <span class="feature-copy">
-              <strong class="feature-name">{{ name }}</strong>
-              <small><span class="help-icon" aria-hidden="true">?</span>{{ feature_descriptions.get(name, "この機能を追加できます。") }}</small>
-              <button
-                class="feature-detail-button"
-                type="button"
-                data-feature-detail-trigger
-                data-feature-name="{{ name }}"
-                data-feature-price="{{ "{:,}".format(price) }}円"
-                data-feature-description="{{ feature_descriptions.get(name, "この機能を追加できます。") }}"
-                data-feature-condition="{{ feature_conditions.get(name, "内容により個別確認") }}"
-              >条件・詳細</button>
-            </span>
-            <span class="feature-price">
-              <strong>{{ "{:,}".format(price) }}円</strong>
-              {% if name in multiple_feature_names %}
-                <span class="feature-quantity">
-                  <span>数量</span>
-                  <input class="form-control" type="number" name="feature_quantities[{{ name }}]" min="0" max="50" value="{{ flow.feature_quantities.get(name, 1) if flow.feature_quantities is defined else 1 }}" aria-label="{{ name }}の数量">
-                </span>
-              {% endif %}
-            </span>
-          </label>
+      <div class="feature-category-list">
+        {% for category in feature_categories %}
+          <section class="feature-category">
+            <h3>{{ category.name }}</h3>
+            <div class="feature-grid">
+              {% for name, price in category.features %}
+                <label class="feature-row">
+                  <input class="form-check-input" type="checkbox" name="features" value="{{ name }}" data-price="{{ price }}" data-quantity-enabled="{{ 'true' if name in multiple_feature_names else 'false' }}" {% if name in flow.features|default([]) %}checked{% endif %}>
+                  <img class="feature-point-icon" src="{{ url_for('static', filename='img/' ~ feature_icon_files.get(name, 'feature-add.svg')) }}" alt="">
+                  <span class="feature-copy">
+                    <strong class="feature-name">{{ name }}</strong>
+                    <small><span class="help-icon" aria-hidden="true">?</span>{{ feature_descriptions.get(name, "この機能を追加できます。") }}</small>
+                    <button
+                      class="feature-detail-button"
+                      type="button"
+                      data-feature-detail-trigger
+                      data-feature-name="{{ name }}"
+                      data-feature-price="{{ "{:,}".format(price) }}円"
+                      data-feature-description="{{ feature_descriptions.get(name, "この機能を追加できます。") }}"
+                      data-feature-condition="{{ feature_conditions.get(name, "内容により個別確認") }}"
+                    >条件・詳細</button>
+                  </span>
+                  <span class="feature-price">
+                    <strong>{{ "{:,}".format(price) }}円</strong>
+                    {% if name in multiple_feature_names %}
+                      <span class="feature-quantity">
+                        <span>数量</span>
+                        <input class="form-control" type="number" name="feature_quantities[{{ name }}]" min="0" max="50" value="{{ flow.feature_quantities.get(name, 1) if flow.feature_quantities is defined else 1 }}" aria-label="{{ name }}の数量">
+                      </span>
+                    {% endif %}
+                  </span>
+                </label>
+              {% endfor %}
+            </div>
+          </section>
         {% endfor %}
       </div>
     </section>
@@ -110,6 +120,67 @@
   </form>
 </section>
 {% include "_parts_modal.html" %}
+<div class="modal fade" id="featureGuideModal" tabindex="-1" aria-labelledby="featureGuideModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content feature-guide-modal">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="featureGuideModalLabel">追加機能の選び方</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+      </div>
+      <div class="modal-body">
+        <p class="feature-guide-lead">
+          <span>追加機能は、アプリ全体で必要になる機能の種類と数量で選びます。</span>
+          <span>下の例のように、画面ごとに必要な機能を整理してから、機能ごとの数量を指定してください。</span>
+        </p>
+        <div class="feature-guide-section">
+          <h3>1. アプリに必要な画面と、その画面で使う機能を考えます</h3>
+          <div class="feature-guide-table" role="table" aria-label="使う画面と必要な機能の例">
+            <div role="row">
+              <strong role="columnheader">使う画面</strong>
+              <strong role="columnheader">必要な機能</strong>
+            </div>
+            <div role="row"><span role="cell">ログイン画面</span><span role="cell"><em class="feature-guide-tag is-login">ログイン機能</em></span></div>
+            <div role="row"><span role="cell">検索画面</span><span role="cell"><em class="feature-guide-tag is-search">データ検索機能</em></span></div>
+            <div role="row"><span role="cell">一覧画面</span><span role="cell"><em class="feature-guide-tag is-delete">データ削除機能</em></span></div>
+            <div role="row"><span role="cell">詳細画面</span><span role="cell"><em class="feature-guide-tag is-create">データ登録機能</em><em class="feature-guide-tag is-edit">データ編集機能</em></span></div>
+            <div role="row"><span role="cell">管理者用マスタ一覧画面</span><span role="cell"><em class="feature-guide-tag is-delete">データ削除機能</em></span></div>
+            <div role="row"><span role="cell">管理者用マスタ登録画面</span><span role="cell"><em class="feature-guide-tag is-create">データ登録機能</em><em class="feature-guide-tag is-edit">データ編集機能</em></span></div>
+          </div>
+        </div>
+        <div class="feature-guide-arrow" aria-hidden="true"></div>
+        <div class="feature-guide-section">
+          <h3>2. 機能ごとに、必要な画面数を整理します</h3>
+          <div class="feature-guide-table is-compact" role="table" aria-label="機能単位で整理した数量">
+            <div role="row"><strong role="columnheader">必要な機能</strong><strong role="columnheader">その機能が必要な画面数</strong></div>
+            <div role="row"><span role="cell"><em class="feature-guide-tag is-login">ログイン機能</em></span><span role="cell">1画面</span></div>
+            <div role="row"><span role="cell"><em class="feature-guide-tag is-search">データ検索機能</em></span><span role="cell">1画面</span></div>
+            <div role="row"><span role="cell"><em class="feature-guide-tag is-delete">データ削除機能</em></span><span role="cell">2画面</span></div>
+            <div role="row"><span role="cell"><em class="feature-guide-tag is-create">データ登録機能</em></span><span role="cell">2画面</span></div>
+            <div role="row"><span role="cell"><em class="feature-guide-tag is-edit">データ編集機能</em></span><span role="cell">2画面</span></div>
+          </div>
+        </div>
+        <div class="feature-guide-arrow" aria-hidden="true"></div>
+        <div class="feature-guide-section">
+          <h3>3. 機能追加画面で、必要な機能にチェックを入れて数量を指定します</h3>
+          <div class="feature-guide-input-example" aria-label="機能追加画面での入力例">
+            <span class="feature-guide-check" aria-hidden="true">✓</span>
+            <span class="feature-guide-plus" aria-hidden="true">+</span>
+            <div class="feature-guide-input-copy">
+              <strong>データ登録</strong>
+              <small><span class="help-icon" aria-hidden="true">?</span>新しい情報を入力フォームから追加できます。</small>
+              <button class="feature-detail-button" type="button" tabindex="-1">条件・詳細</button>
+              <strong class="feature-guide-price">20,000円</strong>
+            </div>
+            <div class="feature-guide-quantity">
+              <span>数量</span>
+              <strong>2</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="feature-detail-popover" id="featureDetailPopover" role="dialog" aria-labelledby="featureDetailPopoverLabel" hidden>
   <h2 id="featureDetailPopoverLabel" data-feature-modal-name></h2>
   <dl class="feature-detail-list">
