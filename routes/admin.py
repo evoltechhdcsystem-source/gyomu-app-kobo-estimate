@@ -3,20 +3,23 @@ from __future__ import annotations
 import csv
 import io
 from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
 
 from flask import (
     Blueprint,
     Response,
+    abort,
     current_app,
     flash,
     redirect,
     render_template,
     request,
+    send_file,
     session,
     url_for,
 )
 
-from models import Estimate, Inquiry, db
+from models import Estimate, Inquiry, InquiryAttachment, db
 
 admin_bp = Blueprint("admin", __name__)
 JST = timezone(timedelta(hours=9), "JST")
@@ -113,6 +116,36 @@ def inquiry_detail(inquiry_id: int):
         inquiry=inquiry,
         back_url=back_url,
         back_label=back_label,
+    )
+
+
+@admin_bp.get("/inquiries/<int:inquiry_id>/attachments/<int:attachment_id>/download")
+def download_inquiry_attachment(inquiry_id: int, attachment_id: int):
+    if not admin_required():
+        return redirect(url_for("admin.login"))
+
+    attachment = InquiryAttachment.query.filter_by(id=attachment_id, inquiry_id=inquiry_id).first_or_404()
+    if not attachment.box_url:
+        abort(404)
+
+    upload_root = Path(current_app.config["UPLOAD_FOLDER"]).resolve()
+    file_path = Path(attachment.box_url).resolve()
+
+    if upload_root not in file_path.parents and file_path != upload_root:
+        current_app.logger.warning(
+            "Blocked attachment download outside upload folder: attachment_id=%s path=%s",
+            attachment.id,
+            file_path,
+        )
+        abort(404)
+
+    if not file_path.is_file():
+        abort(404)
+
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=attachment.file_name,
     )
 
 

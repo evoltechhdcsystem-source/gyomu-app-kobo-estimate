@@ -54,11 +54,16 @@
           <div class="attachment-row">
             <div class="attachment-field">
               <span class="attachment-label">画面表示名</span>
-              <span>{{ attachment.file_name }}</span>
+              <strong>{{ attachment.file_name }}</strong>
             </div>
             <div class="attachment-field">
               <span class="attachment-label">保存先</span>
               <small>{{ attachment.box_url }}</small>
+            </div>
+            <div>
+              <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.download_inquiry_attachment', inquiry_id=inquiry.id, attachment_id=attachment.id) }}">
+                ダウンロード
+              </a>
             </div>
           </div>
         {% else %}

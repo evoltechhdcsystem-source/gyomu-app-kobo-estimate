@@ -2769,6 +2769,10 @@ a.progress-step:hover {
   padding: 10px 0;
 }
 
+.attachment-row .btn {
+  width: fit-content;
+}
+
 .attachment-field {
   display: grid;
   gap: 2px;
