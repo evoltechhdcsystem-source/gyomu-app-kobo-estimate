@@ -3,25 +3,44 @@ name: Deploy to EC2
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
-            sudo -u deploy bash -lc '
-              cd "${{ secrets.EC2_APP_DIR }}"
-              git pull origin main
-              source .venv/bin/activate
-              pip install -r requirements.txt
-              deactivate
-            '
-            sudo systemctl restart estimate
-            sudo systemctl status estimate --no-pager
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy by SSM Run Command
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy estimate app from GitHub Actions" \
+            --parameters 'commands=[
+              "set -e",
+              "sudo -u deploy bash -lc '\''cd /opt/apps/estimate && git pull origin main && source .venv/bin/activate && pip install -r requirements.txt && deactivate'\''",
+              "systemctl restart estimate",
+              "systemctl status estimate --no-pager"
+            ]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+            --query "{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}" \
+            --output text
