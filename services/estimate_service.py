@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from flask import has_app_context
+
+from models import DevicePriceMaster, FeatureMaster, PackageFeatureMaster, PackageMaster
+
 DEVICE_PRICES = {
     "スマートフォン": 10000,
     "PC": 10000,
@@ -74,8 +78,78 @@ PACKAGE_FEATURE_QUANTITIES = {
 }
 
 
+def device_prices() -> dict[str, int]:
+    if not has_app_context():
+        return dict(DEVICE_PRICES)
+    rows = (
+        DevicePriceMaster.query
+        .filter_by(is_active=True)
+        .order_by(DevicePriceMaster.sort_order, DevicePriceMaster.id)
+        .all()
+    )
+    if not rows:
+        return dict(DEVICE_PRICES)
+    return {row.name: row.screen_unit_price for row in rows}
+
+
+def package_screens() -> dict[str, int]:
+    if not has_app_context():
+        return dict(PACKAGE_SCREENS)
+    rows = (
+        PackageMaster.query
+        .filter_by(is_active=True)
+        .order_by(PackageMaster.sort_order, PackageMaster.id)
+        .all()
+    )
+    if not rows:
+        return dict(PACKAGE_SCREENS)
+    return {row.name: row.screen_count for row in rows}
+
+
+def feature_prices() -> dict[str, int]:
+    if not has_app_context():
+        return dict(FEATURE_PRICES)
+    rows = (
+        FeatureMaster.query
+        .filter_by(is_active=True)
+        .order_by(FeatureMaster.sort_order, FeatureMaster.id)
+        .all()
+    )
+    if not rows:
+        return dict(FEATURE_PRICES)
+    return {row.name: row.unit_price for row in rows}
+
+
+def multiple_features() -> set[str]:
+    if not has_app_context():
+        return set(MULTIPLE_FEATURES)
+    rows = (
+        FeatureMaster.query
+        .filter_by(is_active=True, allow_quantity=True)
+        .order_by(FeatureMaster.sort_order, FeatureMaster.id)
+        .all()
+    )
+    if not rows:
+        return set(MULTIPLE_FEATURES)
+    return {row.name for row in rows}
+
+
 def package_feature_quantities(package_type: str) -> dict[str, int]:
-    return dict(PACKAGE_FEATURE_QUANTITIES.get(package_type, {}))
+    if not has_app_context():
+        return dict(PACKAGE_FEATURE_QUANTITIES.get(package_type, {}))
+    rows = (
+        PackageFeatureMaster.query
+        .join(PackageMaster)
+        .join(FeatureMaster)
+        .filter(PackageMaster.name == package_type)
+        .filter(PackageMaster.is_active.is_(True))
+        .filter(FeatureMaster.is_active.is_(True))
+        .order_by(PackageFeatureMaster.sort_order, PackageFeatureMaster.id)
+        .all()
+    )
+    if not rows:
+        return dict(PACKAGE_FEATURE_QUANTITIES.get(package_type, {}))
+    return {row.feature.name: row.quantity for row in rows}
 
 
 def package_features(package_type: str) -> list[str]:
@@ -90,13 +164,15 @@ def package_feature_total(package_type: str, device_type: str) -> int:
 
 
 def feature_unit_price(feature: str, device_type: str) -> int:
+    current_device_prices = device_prices()
+    current_feature_prices = feature_prices()
     if feature == "画面表示項目追加":
-        return DEVICE_PRICES.get(device_type, FEATURE_PRICES[feature])
-    return FEATURE_PRICES.get(feature, 0)
+        return current_device_prices.get(device_type, current_feature_prices.get(feature, 0))
+    return current_feature_prices.get(feature, 0)
 
 
 def feature_prices_for_device(device_type: str) -> dict[str, int]:
-    prices = dict(FEATURE_PRICES)
+    prices = feature_prices()
     prices["画面表示項目追加"] = feature_unit_price("画面表示項目追加", device_type)
     return prices
 
@@ -114,9 +190,13 @@ def calculate_estimate(
     else:
         feature_quantities = package_feature_quantities(package_type)
         selected_features = list(feature_quantities)
-    screen_unit_price = DEVICE_PRICES.get(device_type, 0)
+    current_device_prices = device_prices()
+    current_package_screens = package_screens()
+    current_feature_prices = feature_prices()
+    current_multiple_features = multiple_features()
+    screen_unit_price = current_device_prices.get(device_type, 0)
     screen_count = (
-        custom_screens if package_type == "カスタムパック" else PACKAGE_SCREENS.get(package_type, 0)
+        custom_screens if package_type == "カスタムパック" else current_package_screens.get(package_type, 0)
     )
     screen_total = screen_unit_price * max(screen_count, 0)
 
@@ -128,9 +208,9 @@ def calculate_estimate(
     ]
     for feature in selected_features:
         quantity = max(int(feature_quantities.get(feature, 1) or 1), 1)
-        if feature not in MULTIPLE_FEATURES:
+        if feature not in current_multiple_features:
             quantity = 1
-        if feature not in FEATURE_PRICES:
+        if feature not in current_feature_prices:
             continue
         unit_price = feature_unit_price(feature, device_type)
         name = f"{feature} x {quantity}" if quantity > 1 else feature

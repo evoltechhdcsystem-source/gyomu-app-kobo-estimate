@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from io import BytesIO
-from pathlib import Path
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 from flask import (
     Blueprint,
@@ -18,32 +15,35 @@ from flask import (
     session,
     url_for,
 )
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.units import mm
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from models import Estimate, EstimateItem, Inquiry, InquiryAttachment, db
 from services.box_service import allowed_file, upload_to_box
+from services.estimate_display_service import (
+    custom_feature_categories,
+    estimate_feature_name,
+    estimate_item_condition,
+    estimate_item_label,
+    feature_conditions,
+    feature_descriptions,
+    feature_icon_files,
+    is_screen_count_item,
+    screen_descriptions,
+)
+from services.estimate_pdf_service import build_estimate_pdf, estimate_pdf_download_name
 from services.estimate_service import (
-    DEVICE_PRICES,
-    FEATURE_CONDITIONS,
-    FEATURE_PRICES,
-    MULTIPLE_FEATURES,
-    PACKAGE_SCREENS,
-    SCREEN_PARTS_CONDITION,
     calculate_estimate,
+    device_prices,
+    feature_prices,
     feature_prices_for_device,
+    multiple_features,
     package_feature_total,
     package_feature_quantities,
     package_features,
+    package_screens,
 )
 from services.mail_service import send_inquiry_mails
 from services.lineworks_service import send_lineworks_webhook_notification
+from services.package_display_service import package_choice_cards, package_screen_definitions_by_package
 
 main_bp = Blueprint("main", __name__)
 STEP_FIELDS = {
@@ -53,106 +53,6 @@ STEP_FIELDS = {
     "custom": "step_custom_at",
     "result": "step_result_at",
 }
-CONSUMPTION_TAX_RATE = 0.10
-EXTERNAL_INTEGRATION_FEATURES = {"kintone連携", "AI API連携"}
-IMPLEMENTATION_SUPPORT_FEATURES = {
-    "App Store / Google Play公開申請代行",
-    "ユーザー操作マニュアル",
-    "アプリ作成相談",
-}
-FEATURE_DESCRIPTIONS = {
-    "画面表示項目追加": "1画面内に表示・入力できる項目数を増やします。",
-    "データ登録": "新しい情報を入力フォームから追加できます。",
-    "データ編集": "登録済みの情報をあとから修正できます。",
-    "データ検索": "条件を指定して必要な情報を探せます。",
-    "データ削除": "不要な情報を削除できます。",
-    "メール送信": "通知や受付内容をメールで送信できます。",
-    "マスターテーブル": "商品・顧客・分類などの基本データを管理できます。",
-    "kintone連携": "別途kintone Standard以上のライセンスが必要です。",
-    "AI API連携": "AIによる文章作成、要約、判定などを追加できます。外部AIサービスの利用料は別途必要です。",
-    "App Store / Google Play公開申請代行": "アプリ公開に必要な申請作業を代行します。",
-    "ユーザー操作マニュアル": "利用者向けの操作説明書を作成します。1画面あたりの料金です。",
-    "ユーザーログイン": "利用者ごとにログインして使えるようにします。",
-    "アプリ作成相談": "どんなアプリを作ればいいかなどのご相談を承ります。",
-}
-FEATURE_ICON_FILES = {
-    "画面表示項目追加": "feature-table.svg",
-    "データ登録": "feature-add.svg",
-    "データ編集": "feature-edit.svg",
-    "データ検索": "feature-search.svg",
-    "データ削除": "feature-delete.svg",
-    "メール送信": "feature-mail.svg",
-    "マスターテーブル": "feature-table.svg",
-    "kintone連携": "feature-link.svg",
-    "AI API連携": "feature-ai.svg",
-    "App Store / Google Play公開申請代行": "feature-store.svg",
-    "ユーザー操作マニュアル": "feature-manual.svg",
-    "ユーザーログイン": "feature-login.svg",
-    "アプリ作成相談": "feature-manual.svg",
-}
-SCREEN_DESCRIPTIONS = {
-    "データ登録画面": "新しい情報を入力して保存するための画面です。",
-    "データ一覧画面": "登録した情報をまとめて確認し、必要なデータを探しやすくします。",
-    "データ詳細画面": "1件ごとの内容を詳しく確認するための画面です。",
-    "検索・絞り込み機能": "条件を指定して、必要な情報だけをすばやく見つけられます。",
-    "データ修正画面": "登録済みの情報をあとから変更・更新できます。",
-    "集計・状況確認画面": "件数や状態を集計し、業務の状況を把握しやすくします。",
-    "データ登録機能": "業務データを入力して保存できます。",
-    "データ検索機能": "条件を指定して必要なデータを検索できます。",
-    "データ編集機能": "登録済みの業務データを更新できます。",
-    "データ削除機能": "不要になった業務データを削除できます。",
-    "データ登録機能（マスター）": "マスターデータを入力して保存できます。",
-    "データ編集機能（マスター）": "登録済みのマスターデータを更新できます。",
-    "データ削除機能（マスター）": "不要になったマスターデータを削除できます。",
-}
-INCLUDED_WORK_ITEMS = [
-    "画面・機能確認のお打ち合わせ 2時間まで",
-    "アプリの設計・制作",
-    "開発環境 Click の契約サポート",
-    "仮納品後の微調整",
-    "納品・操作説明 1時間まで",
-]
-
-
-def estimate_item_label(item_name: str) -> str:
-    return (
-        item_name
-        .replace(" 画面単価 x ", " x ")
-        .replace("kintoneのデータベースと連携する(1DB)", "kintone連携")
-        .replace("ストア申請代行", "App Store / Google Play公開申請代行")
-        .replace("アプリ作成コンサル", "アプリ作成相談")
-        .replace("操作マニュアル", "ユーザー操作マニュアル")
-    )
-
-
-def estimate_feature_name(item_name: str) -> str:
-    feature_name = item_name.split(" x ", 1)[0]
-    if feature_name == "kintoneのデータベースと連携する(1DB)":
-        return "kintone連携"
-    if feature_name == "アプリ作成コンサル":
-        return "アプリ作成相談"
-    if feature_name == "ストア申請代行":
-        return "App Store / Google Play公開申請代行"
-    if feature_name == "操作マニュアル":
-        return "ユーザー操作マニュアル"
-    return feature_name
-
-
-def estimate_screen_count(item_name: str) -> int:
-    try:
-        return int(item_name.rsplit(" x ", 1)[-1].replace("画面", ""))
-    except (ValueError, IndexError):
-        return 0
-
-
-def is_screen_count_item(item_name: str, device_type: str) -> bool:
-    return item_name.startswith(device_type) and "画面" in item_name
-
-
-def estimate_item_condition(item_name: str, device_type: str) -> str:
-    if is_screen_count_item(item_name, device_type):
-        return SCREEN_PARTS_CONDITION
-    return FEATURE_CONDITIONS.get(estimate_feature_name(item_name), "")
 
 
 def _as_int(value, default: int = 0) -> int:
@@ -162,426 +62,8 @@ def _as_int(value, default: int = 0) -> int:
         return default
 
 
-def _custom_feature_categories(device_type: str) -> list[dict[str, object]]:
-    feature_prices = feature_prices_for_device(device_type)
-    category_rules = [
-        ("基本機能", None),
-        ("外部連携", EXTERNAL_INTEGRATION_FEATURES),
-        ("導入サポート", IMPLEMENTATION_SUPPORT_FEATURES),
-    ]
-    categories: list[dict[str, object]] = []
-    categorized_features = EXTERNAL_INTEGRATION_FEATURES | IMPLEMENTATION_SUPPORT_FEATURES
-    for category_name, feature_names in category_rules:
-        items = [
-            (name, price)
-            for name, price in feature_prices.items()
-            if (name not in categorized_features if feature_names is None else name in feature_names)
-        ]
-        categories.append({"name": category_name, "features": items})
-    return categories
-
-
 def _now() -> datetime:
     return datetime.utcnow()
-
-
-def _pdf_paragraph(text: str, style: ParagraphStyle) -> Paragraph:
-    escaped = (
-        str(text)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\n", "<br/>")
-    )
-    return Paragraph(escaped, style)
-
-
-def _register_pdf_fonts() -> None:
-    if "HeiseiKakuGo-W5" not in pdfmetrics.getRegisteredFontNames():
-        pdfmetrics.registerFont(UnicodeCIDFont("HeiseiKakuGo-W5"))
-
-
-def _estimate_pdf_items(estimate: Estimate) -> list[list[object]]:
-    rows: list[list[object]] = []
-    for item in estimate.items:
-        price = "" if estimate.package_type in {"基本パック", "運用パック"} else f"{item.price:,}円"
-        rows.append(
-            [
-                estimate_item_label(item.item_name),
-                estimate_item_condition(item.item_name, estimate.device_type),
-                price,
-            ]
-        )
-    return rows
-
-
-def _estimate_pdf_logo() -> Image | None:
-    img_dir = Path(current_app.root_path) / "static" / "img"
-    logo_path = next(
-        (
-            path
-            for path in [
-                img_dir / "top-estimate-logo-factory.png",
-                img_dir / "top-estimate-logo.png",
-                img_dir / "top-estimate-logo-transparent.png",
-            ]
-            if path.exists()
-        ),
-        None,
-    )
-    if logo_path is None:
-        return None
-
-    image = Image(str(logo_path))
-    original_width, original_height = ImageReader(str(logo_path)).getSize()
-    image.drawWidth = 52 * mm
-    image.drawHeight = image.drawWidth * original_height / original_width
-    image.hAlign = "RIGHT"
-    return image
-
-
-def _estimate_tax_amount(subtotal: int) -> int:
-    return int(subtotal * CONSUMPTION_TAX_RATE)
-
-
-def _estimate_package_display_name(package_type: str) -> str:
-    return f"業務アプリ工房 {package_type}"
-
-
-def _estimate_company_display_name(company_name: str) -> str:
-    if "株式会社" in company_name and "株式会社 " not in company_name:
-        return company_name.replace("株式会社", "株式会社 ", 1)
-    return company_name
-
-
-def _estimate_pdf_company_info(style: ParagraphStyle, name_style: ParagraphStyle) -> list[object]:
-    lines = [
-        ("name", _estimate_company_display_name(current_app.config.get("COMPANY_NAME", ""))),
-        ("text", current_app.config.get("COMPANY_ADDRESS", "")),
-        ("text", f"TEL {current_app.config.get('COMPANY_PHONE', '')}" if current_app.config.get("COMPANY_PHONE") else ""),
-        ("text", current_app.config.get("COMPANY_EMAIL", "")),
-    ]
-    info: list[object] = []
-    for line_type, text in lines:
-        if not text:
-            continue
-        info.append(_pdf_paragraph(text, name_style if line_type == "name" else style))
-    return info
-
-
-def _estimate_pdf_download_name() -> str:
-    timestamp = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d_%H%M")
-    return f"業務アプリ工房_{timestamp}.pdf"
-
-
-def _build_estimate_pdf(estimate: Estimate) -> BytesIO:
-    _register_pdf_fonts()
-    issued_on = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y年%m月%d日")
-    subtotal = estimate.total_price
-    tax_amount = _estimate_tax_amount(subtotal)
-    total_with_tax = subtotal + tax_amount
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=12 * mm,
-        leftMargin=12 * mm,
-        topMargin=12 * mm,
-        bottomMargin=12 * mm,
-        title=f"estimate-{estimate.id}",
-    )
-    base = ParagraphStyle(
-        "Japanese",
-        fontName="HeiseiKakuGo-W5",
-        fontSize=9,
-        leading=13,
-        textColor=colors.HexColor("#1f2f37"),
-    )
-    title = ParagraphStyle(
-        "JapaneseTitle",
-        parent=base,
-        fontSize=18,
-        leading=22,
-        spaceAfter=4,
-        alignment=1,
-    )
-    label = ParagraphStyle(
-        "JapaneseLabel",
-        parent=base,
-        fontSize=8,
-        leading=11,
-        textColor=colors.HexColor("#4d5960"),
-    )
-    label_right = ParagraphStyle(
-        "JapaneseLabelRight",
-        parent=label,
-        alignment=2,
-    )
-    amount = ParagraphStyle(
-        "JapaneseAmount",
-        parent=base,
-        alignment=2,
-    )
-    total_amount = ParagraphStyle(
-        "JapaneseTotalAmount",
-        parent=amount,
-        fontSize=15,
-        leading=18,
-    )
-    item_indent = ParagraphStyle(
-        "JapaneseItemIndent",
-        parent=base,
-        leftIndent=12,
-        firstLineIndent=0,
-        spaceBefore=1,
-    )
-    company = ParagraphStyle(
-        "JapaneseCompany",
-        parent=base,
-        fontSize=7,
-        leading=9,
-        alignment=2,
-        textColor=colors.HexColor("#4d5960"),
-    )
-    company_name = ParagraphStyle(
-        "JapaneseCompanyName",
-        parent=company,
-        fontSize=9,
-        leading=11,
-        textColor=colors.HexColor("#1f2f37"),
-    )
-
-    logo = _estimate_pdf_logo()
-    story: list[object] = []
-    header_center: list[object] = [_pdf_paragraph("概算見積書", title)]
-    header_right: list[object] = []
-    if logo:
-        header_right.extend([logo, Spacer(1, 1 * mm)])
-    header_right.extend(_estimate_pdf_company_info(company, company_name))
-    story.extend(
-        [
-            Table(
-                [["", header_center, header_right]],
-                colWidths=[61 * mm, 61 * mm, 64 * mm],
-                style=TableStyle(
-                    [
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("ALIGN", (1, 0), (1, 0), "CENTER"),
-                        ("ALIGN", (2, 0), (2, 0), "RIGHT"),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                        ("TOPPADDING", (0, 0), (-1, -1), 0),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                    ]
-                ),
-            ),
-            Spacer(1, 3 * mm),
-        ]
-    )
-
-    story.extend([
-        Table(
-            [
-                [
-                    _pdf_paragraph("見積番号", label),
-                    _pdf_paragraph(f"No. {estimate.id}", base),
-                    _pdf_paragraph("発行日", label),
-                    _pdf_paragraph(issued_on, base),
-                ],
-                [
-                    _pdf_paragraph("利用端末", label),
-                    _pdf_paragraph(estimate.device_type, base),
-                    "",
-                    "",
-                ],
-                [
-                    _pdf_paragraph("パック", label),
-                    _pdf_paragraph(_estimate_package_display_name(estimate.package_type), base),
-                    "",
-                    "",
-                ],
-                [
-                    _pdf_paragraph("合計（税込）", label),
-                    _pdf_paragraph(f"{total_with_tax:,}円", title),
-                    "",
-                    "",
-                ],
-            ],
-            colWidths=[30 * mm, 62 * mm, 30 * mm, 64 * mm],
-            style=TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, -1), "HeiseiKakuGo-W5"),
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff8f2")),
-                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#e5ddd4")),
-                    ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#e5ddd4")),
-                    ("SPAN", (1, 2), (3, 2)),
-                    ("SPAN", (1, 1), (3, 1)),
-                    ("SPAN", (1, 3), (3, 3)),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                    ("TOPPADDING", (0, 0), (-1, -1), 4),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                ]
-            ),
-        ),
-        Spacer(1, 5 * mm),
-        _pdf_paragraph("見積もり内容", ParagraphStyle("JapaneseSection", parent=base, fontSize=12, leading=15)),
-        Spacer(1, 2 * mm),
-    ])
-
-    if estimate.package_type in {"基本パック", "運用パック"}:
-        package_details: list[object] = [_pdf_paragraph(_estimate_package_display_name(estimate.package_type), base)]
-        package_details.extend(_pdf_paragraph(name, item_indent) for name, _, _ in _estimate_pdf_items(estimate))
-        package_rows = [
-            [
-                _pdf_paragraph("画面・機能", label),
-                _pdf_paragraph("金額", label_right),
-            ],
-            [
-                package_details,
-                _pdf_paragraph(f"{subtotal:,}円", amount),
-            ],
-            [
-                _pdf_paragraph("小計", label_right),
-                _pdf_paragraph(f"{subtotal:,}円", amount),
-            ],
-            [
-                _pdf_paragraph(f"消費税（{int(CONSUMPTION_TAX_RATE * 100)}%）", label_right),
-                _pdf_paragraph(f"{tax_amount:,}円", amount),
-            ],
-            [
-                _pdf_paragraph("合計（税込）", label_right),
-                _pdf_paragraph(f"{total_with_tax:,}円", total_amount),
-            ],
-        ]
-        story.append(
-            Table(
-                package_rows,
-                colWidths=[124 * mm, 62 * mm],
-                repeatRows=1,
-                style=TableStyle(
-                    [
-                        ("FONTNAME", (0, 0), (-1, -1), "HeiseiKakuGo-W5"),
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f3ffd9")),
-                        ("BACKGROUND", (0, 2), (-1, 3), colors.HexColor("#fff8f2")),
-                        ("BACKGROUND", (0, 4), (-1, 4), colors.HexColor("#f3ffd9")),
-                        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#d8e6c4")),
-                        ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#d8e6c4")),
-                        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                        ("ALIGN", (0, 2), (0, -1), "RIGHT"),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                        ("TOPPADDING", (0, 0), (-1, -1), 4),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                    ]
-                ),
-            )
-        )
-    else:
-        item_rows = [
-            [
-                _pdf_paragraph("画面・機能", label),
-                _pdf_paragraph("条件", label),
-                _pdf_paragraph("金額", label_right),
-            ]
-        ]
-        for name, condition, price in _estimate_pdf_items(estimate):
-            item_rows.append(
-                [_pdf_paragraph(name, base), _pdf_paragraph(condition, base), _pdf_paragraph(price, amount)]
-            )
-        total_row_start = len(item_rows)
-        item_rows.extend(
-            [
-                [
-                    _pdf_paragraph("小計", label_right),
-                    "",
-                    _pdf_paragraph(f"{subtotal:,}円", amount),
-                ],
-                [
-                    _pdf_paragraph(f"消費税（{int(CONSUMPTION_TAX_RATE * 100)}%）", label_right),
-                    "",
-                    _pdf_paragraph(f"{tax_amount:,}円", amount),
-                ],
-                [
-                    _pdf_paragraph("合計（税込）", label_right),
-                    "",
-                    _pdf_paragraph(f"{total_with_tax:,}円", total_amount),
-                ],
-            ]
-        )
-        story.append(
-            Table(
-                item_rows,
-                colWidths=[70 * mm, 54 * mm, 62 * mm],
-                repeatRows=1,
-                style=TableStyle(
-                    [
-                        ("FONTNAME", (0, 0), (-1, -1), "HeiseiKakuGo-W5"),
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f3ffd9")),
-                        ("BACKGROUND", (0, total_row_start), (-1, -1), colors.HexColor("#fff8f2")),
-                        ("BACKGROUND", (0, total_row_start + 2), (-1, total_row_start + 2), colors.HexColor("#f3ffd9")),
-                        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#d8e6c4")),
-                        ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#d8e6c4")),
-                        ("ALIGN", (2, 0), (2, -1), "RIGHT"),
-                        ("ALIGN", (0, total_row_start), (1, -1), "RIGHT"),
-                        ("SPAN", (0, total_row_start), (1, total_row_start)),
-                        ("SPAN", (0, total_row_start + 1), (1, total_row_start + 1)),
-                        ("SPAN", (0, total_row_start + 2), (1, total_row_start + 2)),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                        ("TOPPADDING", (0, 0), (-1, -1), 4),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                    ]
-                ),
-            )
-        )
-    included_work_rows = [[_pdf_paragraph("本見積りに含まれる作業", label)]]
-    for item in INCLUDED_WORK_ITEMS:
-        included_work_rows.append([_pdf_paragraph(f"・{item}", base)])
-    story.extend(
-        [
-            Spacer(1, 5 * mm),
-            Table(
-                included_work_rows,
-                colWidths=[186 * mm],
-                style=TableStyle(
-                    [
-                        ("FONTNAME", (0, 0), (-1, -1), "HeiseiKakuGo-W5"),
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#fff8f2")),
-                        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#e5ddd4")),
-                        ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#e5ddd4")),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                        ("TOPPADDING", (0, 0), (-1, -1), 4),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                    ]
-                ),
-            ),
-            Spacer(1, 5 * mm),
-            _pdf_paragraph("別途費用・利用条件", ParagraphStyle("JapaneseNoteTitle", parent=base, fontSize=11, leading=14)),
-            Spacer(1, 2 * mm),
-            _pdf_paragraph("開発ツールライセンス", ParagraphStyle("JapaneseNoteHead", parent=base, fontSize=10, leading=13)),
-            _pdf_paragraph(
-                "業務アプリの作成・公開・運用基盤としてノーコードツール「Click」を利用します。"
-                "ご利用にはClick Standardプラン以上（月額4,400円～）の契約が別途必要です。"
-                "合計金額には加算していません。",
-                label,
-            ),
-            Spacer(1, 2 * mm),
-            _pdf_paragraph("外部AIサービス利用料", ParagraphStyle("JapaneseAiNoteHead", parent=base, fontSize=10, leading=13)),
-            _pdf_paragraph(
-                "OpenAI API等の外部AIサービスを利用する場合、その利用料は別途お客様のご負担となります。\n"
-                "合計金額には加算していません。",
-                label,
-            ),
-        ]
-    )
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
 
 
 def _record_pdf_click(estimate: Estimate) -> None:
@@ -807,16 +289,17 @@ def device_select():
     if request.method == "GET":
         return render_template(
             "device_select.html",
-            device_prices=DEVICE_PRICES,
+            device_prices=device_prices(),
             estimate_status=_estimate_status("device"),
         )
 
     device_type = request.form.get("device_type", "")
-    if device_type not in DEVICE_PRICES:
+    current_device_prices = device_prices()
+    if device_type not in current_device_prices:
         flash("端末を選ぶと次へ進めます。3つの中から1つ選択してください。", "danger")
         return render_template(
             "device_select.html",
-            device_prices=DEVICE_PRICES,
+            device_prices=current_device_prices,
             estimate_status=_estimate_status("device"),
         ), 400
 
@@ -838,21 +321,26 @@ def package_select():
     if request.method == "GET":
         return render_template(
             "package_select.html",
-            package_screens=PACKAGE_SCREENS,
+            package_screens=package_screens(),
             package_feature_total=package_feature_total,
-            device_prices=DEVICE_PRICES,
+            package_choice_cards=package_choice_cards(),
+            package_screen_definitions=package_screen_definitions_by_package(),
+            device_prices=device_prices(),
             flow=flow,
             estimate_status=_estimate_status("package", flow),
         )
 
     package_type = request.form.get("package_type", "")
-    if package_type not in PACKAGE_SCREENS:
+    current_package_screens = package_screens()
+    if package_type not in current_package_screens:
         flash("パックを選ぶと次へ進めます。現場で使いたい内容に近いパックを1つ選択してください。", "danger")
         return render_template(
             "package_select.html",
-            package_screens=PACKAGE_SCREENS,
+            package_screens=current_package_screens,
             package_feature_total=package_feature_total,
-            device_prices=DEVICE_PRICES,
+            package_choice_cards=package_choice_cards(),
+            package_screen_definitions=package_screen_definitions_by_package(),
+            device_prices=device_prices(),
             flow=flow,
             estimate_status=_estimate_status("package", flow),
         ), 400
@@ -887,12 +375,12 @@ def custom_estimate():
         return render_template(
             "custom_estimate.html",
             feature_prices=feature_prices_for_device(flow["device_type"]),
-            feature_categories=_custom_feature_categories(flow["device_type"]),
-            feature_descriptions=FEATURE_DESCRIPTIONS,
-            feature_conditions=FEATURE_CONDITIONS,
-            feature_icon_files=FEATURE_ICON_FILES,
-            multiple_feature_names=MULTIPLE_FEATURES,
-            device_prices=DEVICE_PRICES,
+            feature_categories=custom_feature_categories(flow["device_type"]),
+            feature_descriptions=feature_descriptions(),
+            feature_conditions=feature_conditions(),
+            feature_icon_files=feature_icon_files(),
+            multiple_feature_names=multiple_features(),
+            device_prices=device_prices(),
             flow=flow,
             estimate_status=_estimate_status("custom", flow),
         )
@@ -903,23 +391,24 @@ def custom_estimate():
         return render_template(
             "custom_estimate.html",
             feature_prices=feature_prices_for_device(flow["device_type"]),
-            feature_categories=_custom_feature_categories(flow["device_type"]),
-            feature_descriptions=FEATURE_DESCRIPTIONS,
-            feature_conditions=FEATURE_CONDITIONS,
-            feature_icon_files=FEATURE_ICON_FILES,
-            multiple_feature_names=MULTIPLE_FEATURES,
-            device_prices=DEVICE_PRICES,
+            feature_categories=custom_feature_categories(flow["device_type"]),
+            feature_descriptions=feature_descriptions(),
+            feature_conditions=feature_conditions(),
+            feature_icon_files=feature_icon_files(),
+            multiple_feature_names=multiple_features(),
+            device_prices=device_prices(),
             flow=flow,
             estimate_status=_estimate_status("custom", flow),
         ), 400
 
     selected_features = [
-        feature for feature in request.form.getlist("features") if feature in FEATURE_PRICES
+        feature for feature in request.form.getlist("features") if feature in feature_prices()
     ]
     feature_quantities = {}
+    current_multiple_features = multiple_features()
     for feature in selected_features:
         quantity = _as_int(request.form.get(f"feature_quantities[{feature}]"), 1)
-        feature_quantities[feature] = max(quantity, 1) if feature in MULTIPLE_FEATURES else 1
+        feature_quantities[feature] = max(quantity, 1) if feature in current_multiple_features else 1
 
     if not selected_features:
         flash("追加機能を選ぶと結果へ進めます。必要な機能を1つ以上選択してください。", "danger")
@@ -930,12 +419,12 @@ def custom_estimate():
         return render_template(
             "custom_estimate.html",
             feature_prices=feature_prices_for_device(flow["device_type"]),
-            feature_categories=_custom_feature_categories(flow["device_type"]),
-            feature_descriptions=FEATURE_DESCRIPTIONS,
-            feature_conditions=FEATURE_CONDITIONS,
-            feature_icon_files=FEATURE_ICON_FILES,
-            multiple_feature_names=MULTIPLE_FEATURES,
-            device_prices=DEVICE_PRICES,
+            feature_categories=custom_feature_categories(flow["device_type"]),
+            feature_descriptions=feature_descriptions(),
+            feature_conditions=feature_conditions(),
+            feature_icon_files=feature_icon_files(),
+            multiple_feature_names=current_multiple_features,
+            device_prices=device_prices(),
             flow=flow,
             estimate_status=_estimate_status("custom", flow),
         ), 400
@@ -979,9 +468,10 @@ def estimate_result(estimate_id: int):
         estimate_feature_name=estimate_feature_name,
         estimate_item_condition=estimate_item_condition,
         is_screen_count_item=is_screen_count_item,
-        feature_descriptions=FEATURE_DESCRIPTIONS,
-        feature_conditions=FEATURE_CONDITIONS,
-        screen_descriptions=SCREEN_DESCRIPTIONS,
+        feature_descriptions=feature_descriptions(),
+        feature_conditions=feature_conditions(),
+        screen_descriptions=screen_descriptions(),
+        package_screen_definitions=package_screen_definitions_by_package(),
     )
 
 
@@ -1011,10 +501,10 @@ def download_estimate_pdf(estimate_id: int):
     estimate = Estimate.query.get_or_404(estimate_id)
     _record_pdf_click(estimate)
     return send_file(
-        _build_estimate_pdf(estimate),
+        build_estimate_pdf(estimate),
         mimetype="application/pdf",
         as_attachment=True,
-        download_name=_estimate_pdf_download_name(),
+        download_name=estimate_pdf_download_name(),
     )
 
 

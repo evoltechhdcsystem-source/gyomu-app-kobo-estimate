@@ -11,6 +11,7 @@ from sqlalchemy import inspect, text
 from models import db
 from routes.admin import admin_bp
 from routes.main import main_bp
+from services.master_seed_service import seed_estimate_masters
 
 csrf = CSRFProtect()
 
@@ -48,6 +49,39 @@ def _ensure_tracking_columns() -> None:
             db.session.execute(
                 text(f"ALTER TABLE estimates ADD COLUMN {exists_clause}{column_name} {column_type}")
             )
+    db.session.commit()
+
+
+def _ensure_master_columns() -> None:
+    inspector = inspect(db.engine)
+    table_defs = {
+        "feature_masters": {
+            "category_name": "VARCHAR(80)",
+            "description": "TEXT",
+            "condition": "TEXT",
+            "icon_file": "VARCHAR(255)",
+        },
+        "package_masters": {
+            "price_label": "VARCHAR(120)",
+            "image_file": "VARCHAR(255)",
+            "image_alt": "VARCHAR(255)",
+            "summary": "TEXT",
+            "detail_title": "VARCHAR(120)",
+            "modal_target": "VARCHAR(120)",
+            "example": "TEXT",
+        },
+    }
+    is_postgres = db.engine.dialect.name.startswith("postgres")
+    for table_name, column_defs in table_defs.items():
+        if not inspector.has_table(table_name):
+            continue
+        existing_columns = {column["name"] for column in inspector.get_columns(table_name)}
+        for column_name, column_type in column_defs.items():
+            if column_name not in existing_columns:
+                exists_clause = "IF NOT EXISTS " if is_postgres else ""
+                db.session.execute(
+                    text(f"ALTER TABLE {table_name} ADD COLUMN {exists_clause}{column_name} {column_type}")
+                )
     db.session.commit()
 
 
@@ -100,6 +134,8 @@ def create_app() -> Flask:
 
     with app.app_context():
         db.create_all()
+        _ensure_master_columns()
+        seed_estimate_masters()
         _ensure_tracking_columns()
 
     return app

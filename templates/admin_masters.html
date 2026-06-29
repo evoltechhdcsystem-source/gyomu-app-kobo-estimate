@@ -1,0 +1,794 @@
+{% extends "base.html" %}
+{% block title %}マスター管理{% endblock %}
+{% block content %}
+<section class="container-fluid admin-wide py-4 py-lg-5">
+  <datalist id="packageNameOptions">
+    {% for package in packages %}
+      <option value="{{ package.name }}"></option>
+    {% endfor %}
+  </datalist>
+  <datalist id="featureCategoryOptions">
+    {% for category in feature_category_options %}
+      <option value="{{ category }}"></option>
+    {% endfor %}
+  </datalist>
+  <datalist id="featureIconOptions">
+    {% for icon_file in feature_icon_options %}
+      <option value="{{ icon_file }}"></option>
+    {% endfor %}
+  </datalist>
+  <datalist id="packageImageOptions">
+    {% for image_file in package_image_options %}
+      <option value="{{ image_file }}"></option>
+    {% endfor %}
+  </datalist>
+  <datalist id="packageChipClassOptions">
+    {% for css_class in package_chip_class_options %}
+      <option value="{{ css_class }}"></option>
+    {% endfor %}
+  </datalist>
+
+  <div class="admin-head">
+    <div>
+      <h1>マスター管理</h1>
+      <p>見積り計算に使う端末単価、パック、追加機能、パック内機能数を編集できます。</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">管理TOP</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12" id="device-prices">
+      <div class="form-section">
+        <h2>端末単価</h2>
+        <p class="text-secondary small">端末選択画面、画面単価、見積計算に反映されます。</p>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>表示順</th>
+                <th>端末名</th>
+                <th class="text-end">画面単価</th>
+                <th>有効</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in device_prices %}
+                <tr data-master-row="1" data-master-section="device-prices" data-save-url="{{ url_for('admin.update_device_master', master_id=row.id) }}">
+                  <form method="post" action="{{ url_for('admin.update_device_master', master_id=row.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="return_anchor" value="device-prices">
+                    <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
+                    <td><input class="form-control form-control-sm" name="name" value="{{ row.name }}" list="packageNameOptions" required></td>
+                    <td><input class="form-control form-control-sm text-end" name="screen_unit_price" type="number" min="0" value="{{ row.screen_unit_price }}" required></td>
+                    <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" {% if row.is_active %}checked{% endif %}></td>
+                    <td class="text-end">
+                      <button class="btn btn-outline-primary btn-sm">更新</button>
+                      <button class="btn btn-outline-danger btn-sm" name="delete" value="1" onclick="return confirm('削除しますか？')">削除</button>
+                    </td>
+                  </form>
+                </tr>
+              {% endfor %}
+              <tr class="table-light">
+                <form method="post" action="{{ url_for('admin.create_device_master') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="return_anchor" value="device-prices">
+                  <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
+                  <td><input class="form-control form-control-sm" name="name" placeholder="新しい端末名" required></td>
+                  <td><input class="form-control form-control-sm text-end" name="screen_unit_price" type="number" min="0" value="0" required></td>
+                  <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" checked></td>
+                  <td class="text-end"><button class="btn btn-primary btn-sm">追加</button></td>
+                </form>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12" id="packages">
+      <div class="form-section">
+        <h2>パック</h2>
+        <p class="text-secondary small">パック選択画面のカード、見積結果の選択パック表示、標準画面定義との紐づけに反映されます。</p>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>表示順</th>
+                <th>パック名</th>
+                <th class="text-end">画面数</th>
+                <th>カード表示文言</th>
+                <th>画像</th>
+                <th>概要</th>
+                <th>詳細見出し</th>
+                <th>
+                  モーダルID
+                  <small class="d-block text-secondary fw-normal">IDの重複はできません。</small>
+                </th>
+                <th>例</th>
+                <th>有効</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in packages %}
+                <tr data-master-row="1" data-master-section="packages" data-save-url="{{ url_for('admin.update_package_master', master_id=row.id) }}">
+                  <form method="post" action="{{ url_for('admin.update_package_master', master_id=row.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="return_anchor" value="packages">
+                    <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
+                    <td><input class="form-control form-control-sm" name="name" value="{{ row.name }}" required></td>
+                    <td><input class="form-control form-control-sm text-end" name="screen_count" type="number" min="0" value="{{ row.screen_count }}" required></td>
+                    <td><input class="form-control form-control-sm" name="price_label" value="{{ row.price_label or '' }}"></td>
+                    <td>
+                      <input class="form-control form-control-sm mb-1" name="image_file" value="{{ row.image_file or '' }}" list="packageImageOptions" placeholder="img/package-custom-generated.png">
+                      <input class="form-control form-control-sm" name="image_alt" value="{{ row.image_alt or '' }}" placeholder="画像代替テキスト">
+                    </td>
+                    <td><textarea class="form-control form-control-sm" name="summary" rows="2">{{ row.summary or '' }}</textarea></td>
+                    <td><input class="form-control form-control-sm" name="detail_title" value="{{ row.detail_title or '' }}"></td>
+                    <td>
+                      <input class="form-control form-control-sm" name="modal_target" value="{{ row.modal_target or '' }}">
+                    </td>
+                    <td><textarea class="form-control form-control-sm" name="example" rows="2">{{ row.example or '' }}</textarea></td>
+                    <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" {% if row.is_active %}checked{% endif %}></td>
+                    <td class="text-end">
+                      <button class="btn btn-outline-primary btn-sm">更新</button>
+                      <button class="btn btn-outline-danger btn-sm" name="delete" value="1" onclick="return confirm('このパックと関連する表示定義を削除しますか？')">削除</button>
+                    </td>
+                  </form>
+                </tr>
+              {% endfor %}
+              <tr class="table-light">
+                <form method="post" action="{{ url_for('admin.create_package_master') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="return_anchor" value="packages">
+                  <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
+                  <td><input class="form-control form-control-sm" name="name" list="packageNameOptions" placeholder="新しいパック名" required></td>
+                  <td><input class="form-control form-control-sm text-end" name="screen_count" type="number" min="0" value="0" required></td>
+                  <td><input class="form-control form-control-sm" name="price_label"></td>
+                  <td>
+                    <input class="form-control form-control-sm mb-1" name="image_file" list="packageImageOptions" placeholder="img/package-custom-generated.png">
+                    <input class="form-control form-control-sm" name="image_alt" placeholder="画像代替テキスト">
+                  </td>
+                  <td><textarea class="form-control form-control-sm" name="summary" rows="2"></textarea></td>
+                  <td><input class="form-control form-control-sm" name="detail_title" value="入っている内容"></td>
+                  <td><input class="form-control form-control-sm" name="modal_target"></td>
+                  <td><textarea class="form-control form-control-sm" name="example" rows="2"></textarea></td>
+                  <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" checked></td>
+                  <td class="text-end"><button class="btn btn-primary btn-sm">追加</button></td>
+                </form>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12" id="features">
+      <div class="form-section">
+        <h2>追加機能</h2>
+        <p class="text-secondary small">カスタム見積画面の追加機能一覧、条件・詳細表示、見積計算、パック内機能数の候補に反映されます。</p>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>表示順</th>
+                <th>機能名</th>
+                <th class="text-end">単価</th>
+                <th>カテゴリ</th>
+                <th>説明</th>
+                <th>条件</th>
+                <th>
+                  アイコン
+                  <small class="d-block text-secondary fw-normal">static/img に保存したファイル名のみ入力します。</small>
+                </th>
+                <th>数量指定</th>
+                <th>有効</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in features %}
+                <tr data-master-row="1" data-master-section="features" data-save-url="{{ url_for('admin.update_feature_master', master_id=row.id) }}">
+                  <form method="post" action="{{ url_for('admin.update_feature_master', master_id=row.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="return_anchor" value="features">
+                    <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
+                    <td><input class="form-control form-control-sm" name="name" value="{{ row.name }}" required></td>
+                    <td><input class="form-control form-control-sm text-end" name="unit_price" type="number" min="0" value="{{ row.unit_price }}" required></td>
+                    <td><input class="form-control form-control-sm" name="category_name" value="{{ row.category_name or '' }}" list="featureCategoryOptions"></td>
+                    <td><textarea class="form-control form-control-sm" name="description" rows="2">{{ row.description or '' }}</textarea></td>
+                    <td><textarea class="form-control form-control-sm" name="condition" rows="2">{{ row.condition or '' }}</textarea></td>
+                    <td>
+                      <input class="form-control form-control-sm" name="icon_file" value="{{ row.icon_file or '' }}" list="featureIconOptions">
+                    </td>
+                    <td class="text-center"><input class="form-check-input" name="allow_quantity" type="checkbox" value="1" {% if row.allow_quantity %}checked{% endif %}></td>
+                    <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" {% if row.is_active %}checked{% endif %}></td>
+                    <td class="text-end">
+                      <button class="btn btn-outline-primary btn-sm">更新</button>
+                      <button class="btn btn-outline-danger btn-sm" name="delete" value="1" onclick="return confirm('この追加機能を削除しますか？')">削除</button>
+                    </td>
+                  </form>
+                </tr>
+              {% endfor %}
+              <tr class="table-light">
+                <form method="post" action="{{ url_for('admin.create_feature_master') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="return_anchor" value="features">
+                  <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
+                  <td><input class="form-control form-control-sm" name="name" placeholder="新しい機能名" required></td>
+                  <td><input class="form-control form-control-sm text-end" name="unit_price" type="number" min="0" value="0" required></td>
+                  <td><input class="form-control form-control-sm" name="category_name" value="基本機能" list="featureCategoryOptions"></td>
+                  <td><textarea class="form-control form-control-sm" name="description" rows="2"></textarea></td>
+                  <td><textarea class="form-control form-control-sm" name="condition" rows="2"></textarea></td>
+                  <td><input class="form-control form-control-sm" name="icon_file" value="feature-add.svg" list="featureIconOptions"></td>
+                  <td class="text-center"><input class="form-check-input" name="allow_quantity" type="checkbox" value="1" checked></td>
+                  <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" checked></td>
+                  <td class="text-end"><button class="btn btn-primary btn-sm">追加</button></td>
+                </form>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12" id="package-features">
+      <div class="form-section">
+        <h2>パックに含まれる機能数</h2>
+        <p class="text-secondary small">基本パック・運用パックなどを選んだ時、自動で見積りに含める追加機能と数量に反映されます。パック選択画面やモーダルの表示項目ではありません。</p>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>表示順</th>
+                <th>パック</th>
+                <th>追加機能</th>
+                <th class="text-end">数量</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in package_features %}
+                <tr data-master-row="1" data-master-section="package-features" data-save-url="{{ url_for('admin.update_package_feature_master', master_id=row.id) }}">
+                  <form method="post" action="{{ url_for('admin.update_package_feature_master', master_id=row.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="return_anchor" value="package-features">
+                    <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
+                    <td>{{ row.package.name }}</td>
+                    <td>{{ row.feature.name }}</td>
+                    <td><input class="form-control form-control-sm text-end" name="quantity" type="number" min="1" value="{{ row.quantity }}" required></td>
+                    <td class="text-end">
+                      <button class="btn btn-outline-primary btn-sm">更新</button>
+                      <button class="btn btn-outline-danger btn-sm" name="delete" value="1" onclick="return confirm('削除しますか？')">削除</button>
+                    </td>
+                  </form>
+                </tr>
+              {% endfor %}
+              <tr class="table-light">
+                <form method="post" action="{{ url_for('admin.create_package_feature_master') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="return_anchor" value="package-features">
+                  <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
+                  <td>
+                    <select class="form-select form-select-sm" name="package_id" required>
+                      {% for package in packages %}
+                        <option value="{{ package.id }}">{{ package.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <select class="form-select form-select-sm" name="feature_id" required>
+                      {% for feature in features %}
+                        <option value="{{ feature.id }}">{{ feature.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td><input class="form-control form-control-sm text-end" name="quantity" type="number" min="1" value="1" required></td>
+                  <td class="text-end"><button class="btn btn-primary btn-sm">追加</button></td>
+                </form>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12" id="package-display-items">
+      <div class="form-section">
+        <h2>パック表示項目</h2>
+        <p class="text-secondary small">パック選択画面のカード内に表示される箇条書きに反映されます。</p>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>表示順</th>
+                <th>パック</th>
+                <th>文言</th>
+                <th>見出し</th>
+                <th>有効</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in package_display_items %}
+                <tr data-master-row="1" data-master-section="package-display-items" data-save-url="{{ url_for('admin.update_package_display_item_master', master_id=row.id) }}">
+                  <form method="post" action="{{ url_for('admin.update_package_display_item_master', master_id=row.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="return_anchor" value="package-display-items">
+                    <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
+                    <td>{{ row.package.name }}</td>
+                    <td><input class="form-control form-control-sm" name="text" value="{{ row.text }}" required></td>
+                    <td class="text-center"><input class="form-check-input" name="is_section" type="checkbox" value="1" {% if row.is_section %}checked{% endif %}></td>
+                    <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" {% if row.is_active %}checked{% endif %}></td>
+                    <td class="text-end">
+                      <button class="btn btn-outline-primary btn-sm">更新</button>
+                      <button class="btn btn-outline-danger btn-sm" name="delete" value="1" onclick="return confirm('削除しますか？')">削除</button>
+                    </td>
+                  </form>
+                </tr>
+              {% endfor %}
+              <tr class="table-light">
+                <form method="post" action="{{ url_for('admin.create_package_display_item_master') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="return_anchor" value="package-display-items">
+                  <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
+                  <td>
+                    <select class="form-select form-select-sm" name="package_id" required>
+                      {% for package in packages %}
+                        <option value="{{ package.id }}">{{ package.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td><input class="form-control form-control-sm" name="text" placeholder="表示する文言" required></td>
+                  <td class="text-center"><input class="form-check-input" name="is_section" type="checkbox" value="1"></td>
+                  <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" checked></td>
+                  <td class="text-end"><button class="btn btn-primary btn-sm">追加</button></td>
+                </form>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12" id="package-screen-definitions">
+      <div class="form-section">
+        <h2>標準画面・付属機能の表示定義</h2>
+        <p class="text-secondary small">パック選択画面の付属機能モーダルと、見積結果画面の標準画面一覧に反映されます。</p>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>表示順</th>
+                <th>パック</th>
+                <th>区分見出し</th>
+                <th>画面名</th>
+                <th>付属機能</th>
+                <th>有効</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in package_screen_definitions %}
+                <tr data-master-row="1" data-master-section="package-screen-definitions" data-save-url="{{ url_for('admin.update_package_screen_definition_master', master_id=row.id) }}">
+                  <form method="post" action="{{ url_for('admin.update_package_screen_definition_master', master_id=row.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="return_anchor" value="package-screen-definitions">
+                    <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
+                    <td>{{ row.package.name }}</td>
+                    <td><input class="form-control form-control-sm" name="section_title" value="{{ row.section_title or '' }}"></td>
+                    <td><input class="form-control form-control-sm" name="screen_name" value="{{ row.screen_name }}" required></td>
+                    <td>
+                      {% for feature in row.feature_definitions|sort(attribute='sort_order') %}
+                        <div class="d-flex gap-2 mb-1 align-items-center">
+                          <span>{{ feature.label }}</span>
+                          <small class="text-secondary">{{ feature.css_class or '-' }}</small>
+                        </div>
+                      {% else %}
+                        <span class="text-secondary">なし</span>
+                      {% endfor %}
+                    </td>
+                    <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" {% if row.is_active %}checked{% endif %}></td>
+                    <td class="text-end">
+                      <button class="btn btn-outline-primary btn-sm">更新</button>
+                      <button class="btn btn-outline-danger btn-sm" name="delete" value="1" onclick="return confirm('削除しますか？')">削除</button>
+                    </td>
+                  </form>
+                </tr>
+              {% endfor %}
+              <tr class="table-light">
+                <form method="post" action="{{ url_for('admin.create_package_screen_definition_master') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="return_anchor" value="package-screen-definitions">
+                  <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
+                  <td>
+                    <select class="form-select form-select-sm" name="package_id" required>
+                      {% for package in packages %}
+                        <option value="{{ package.id }}">{{ package.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td><input class="form-control form-control-sm" name="section_title" placeholder="例: 通常利用"></td>
+                  <td><input class="form-control form-control-sm" name="screen_name" placeholder="画面名" required></td>
+                  <td><span class="text-secondary">追加後に下の表で設定</span></td>
+                  <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" checked></td>
+                  <td class="text-end"><button class="btn btn-primary btn-sm">追加</button></td>
+                </form>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h5 mt-4" id="package-screen-features">付属機能表示</h3>
+        <p class="text-secondary small">標準画面定義の右側に表示される機能チップに反映されます。CSSクラスは色分けに使います。</p>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>表示順</th>
+                <th>画面定義</th>
+                <th>表示名</th>
+                <th>CSSクラス</th>
+                <th>有効</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for screen in package_screen_definitions %}
+                {% for feature in screen.feature_definitions|sort(attribute='sort_order') %}
+                  <tr data-master-row="1" data-master-section="package-screen-features" data-save-url="{{ url_for('admin.update_package_screen_feature_definition_master', master_id=feature.id) }}">
+                    <form method="post" action="{{ url_for('admin.update_package_screen_feature_definition_master', master_id=feature.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="return_anchor" value="package-screen-features">
+                      <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ feature.sort_order }}"></td>
+                      <td>{{ screen.package.name }} / {{ screen.screen_name }}</td>
+                      <td><input class="form-control form-control-sm" name="label" value="{{ feature.label }}" required></td>
+                      <td>
+                        <select class="form-select form-select-sm" name="css_class">
+                          <option value="">なし</option>
+                          {% for css_class in package_chip_class_options %}
+                            <option value="{{ css_class }}" {% if feature.css_class == css_class %}selected{% endif %}>{{ css_class }}</option>
+                          {% endfor %}
+                        </select>
+                      </td>
+                      <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" {% if feature.is_active %}checked{% endif %}></td>
+                      <td class="text-end">
+                        <button class="btn btn-outline-primary btn-sm">更新</button>
+                        <button class="btn btn-outline-danger btn-sm" name="delete" value="1" onclick="return confirm('削除しますか？')">削除</button>
+                      </td>
+                    </form>
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+              <tr class="table-light">
+                <form method="post" action="{{ url_for('admin.create_package_screen_feature_definition_master') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="return_anchor" value="package-screen-features">
+                  <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
+                  <td>
+                    <select class="form-select form-select-sm" name="screen_definition_id" required>
+                      {% for screen in package_screen_definitions %}
+                        <option value="{{ screen.id }}">{{ screen.package.name }} / {{ screen.screen_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td><input class="form-control form-control-sm" name="label" placeholder="データ登録機能" required></td>
+                  <td>
+                    <select class="form-select form-select-sm" name="css_class">
+                      <option value="">なし</option>
+                      {% for css_class in package_chip_class_options %}
+                        <option value="{{ css_class }}">{{ css_class }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" checked></td>
+                  <td class="text-end"><button class="btn btn-primary btn-sm">追加</button></td>
+                </form>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="modal fade" id="masterGuideModal" tabindex="-1" aria-labelledby="masterGuideModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="masterGuideModalLabel">マスター設定の反映先</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <h3 class="h5">パックを追加する流れ</h3>
+            <ol>
+              <li><strong>パック</strong>で、パック名・画面数・カード表示文言・画像・概要を登録します。</li>
+              <li><strong>パックに含まれる機能数</strong>で、自動見積りに含める追加機能と数量を登録します。</li>
+              <li><strong>パック表示項目</strong>で、パック選択カード内の箇条書きを登録します。</li>
+              <li><strong>標準画面・付属機能の表示定義</strong>で、モーダルと見積結果に出す画面一覧を登録します。</li>
+              <li><strong>付属機能表示</strong>で、各画面に表示する機能チップを登録します。</li>
+            </ol>
+          </div>
+          <div class="col-md-6">
+            <h3 class="h5">追加機能を追加する流れ</h3>
+            <ol>
+              <li><strong>追加機能</strong>で、機能名・単価・カテゴリ・説明・条件・アイコンを登録します。</li>
+              <li>パックに含めたい場合は、<strong>パックに含まれる機能数</strong>にも登録します。</li>
+              <li>標準画面の付属機能として見せたい場合は、<strong>付属機能表示</strong>にも登録します。</li>
+            </ol>
+          </div>
+        </div>
+        <hr>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>設定場所</th>
+                <th>主な項目</th>
+                <th>反映先</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>端末単価</td>
+                <td>端末名、画面単価</td>
+                <td>端末選択画面、画面単価、見積計算</td>
+              </tr>
+              <tr>
+                <td>パック</td>
+                <td>パック名、画面数、カード表示文言、画像、概要、例</td>
+                <td>パック選択カード、見積結果の選択パック表示</td>
+              </tr>
+              <tr>
+                <td>追加機能</td>
+                <td>カテゴリ、説明、条件、アイコン、数量指定</td>
+                <td>カスタム見積画面、条件・詳細表示、見積計算</td>
+              </tr>
+              <tr>
+                <td>パックに含まれる機能数</td>
+                <td>パック、追加機能、数量</td>
+                <td>基本パック・運用パックなどを選んだ時の自動見積り内訳</td>
+              </tr>
+              <tr>
+                <td>パック表示項目</td>
+                <td>文言、見出し</td>
+                <td>パック選択カード内の箇条書き</td>
+              </tr>
+              <tr>
+                <td>標準画面・付属機能の表示定義</td>
+                <td>区分見出し、画面名</td>
+                <td>パック選択画面の付属機能モーダル、見積結果画面の標準画面一覧</td>
+              </tr>
+              <tr>
+                <td>付属機能表示</td>
+                <td>表示名、CSSクラス</td>
+                <td>標準画面一覧の右側に表示される色付き機能チップ</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const unsavedMessage = "編集中で確定していない項目があります。このまま移動しますか？";
+  let allowSubmit = false;
+  const sectionLabels = {
+    "device-prices": "端末単価",
+    "packages": "パック",
+    "features": "追加機能",
+    "package-features": "パックに含まれる機能数",
+    "package-display-items": "パック表示項目",
+    "package-screen-definitions": "標準画面・表示定義",
+    "package-screen-features": "付属機能表示",
+  };
+  const ignoreFieldNames = new Set(["csrf_token", "return_anchor", "delete"]);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+    const field = event.target;
+    if (!(field instanceof HTMLElement) || !field.closest("[data-master-row]")) {
+      return;
+    }
+    if (field instanceof HTMLTextAreaElement || field instanceof HTMLButtonElement) {
+      return;
+    }
+    event.preventDefault();
+  });
+
+  const watchedRows = Array.from(document.querySelectorAll("[data-master-row]")).filter((row) => {
+    return watchedFields(row).length > 0;
+  });
+
+  function fieldValue(field) {
+    if (field.type === "checkbox" || field.type === "radio") {
+      return field.checked ? "1" : "0";
+    }
+    return field.value || "";
+  }
+
+  function watchedFields(scope) {
+    return Array.from(scope.querySelectorAll("input, textarea, select")).filter((field) => {
+      return field.name && !ignoreFieldNames.has(field.name);
+    });
+  }
+
+  function isDirty(row) {
+    return watchedFields(row).some((field) => fieldValue(field) !== field.dataset.initialValue);
+  }
+
+  function ensureDirtyMark(row) {
+    let mark = row.querySelector("[data-unsaved-mark]");
+    const actionCell = row.querySelector("td:last-child") || row;
+    if (!mark) {
+      mark = document.createElement("span");
+      mark.dataset.unsavedMark = "1";
+      mark.className = "badge text-bg-warning ms-2";
+      mark.textContent = "※ 編集中";
+      mark.hidden = true;
+      actionCell.appendChild(mark);
+    }
+    mark.hidden = !isDirty(row);
+    updateBulkButtons();
+  }
+
+  function hasDirtyForms() {
+    return watchedRows.some(isDirty);
+  }
+
+  function dirtyRowsInSection(sectionName) {
+    return watchedRows.filter((row) => row.dataset.masterSection === sectionName && isDirty(row));
+  }
+
+  function buildFormData(row) {
+    const formData = new FormData();
+    Array.from(row.querySelectorAll("input, textarea, select")).forEach((field) => {
+      if (!field.name || field.name === "delete") {
+        return;
+      }
+      if ((field.type === "checkbox" || field.type === "radio") && !field.checked) {
+        return;
+      }
+      formData.append(field.name, field.value || "");
+    });
+    if (!formData.has("csrf_token")) {
+      const csrf = document.querySelector("input[name='csrf_token']");
+      if (csrf) {
+        formData.append("csrf_token", csrf.value);
+      }
+    }
+    if (!formData.has("return_anchor") && row.dataset.masterSection) {
+      formData.append("return_anchor", row.dataset.masterSection);
+    }
+    return formData;
+  }
+
+  async function saveDirtyRows(sectionName, button) {
+    const rows = dirtyRowsInSection(sectionName);
+    if (!rows.length) {
+      return;
+    }
+    allowSubmit = true;
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = `${rows.length}件を反映中...`;
+    try {
+      for (const row of rows) {
+        const response = await fetch(row.dataset.saveUrl, {
+          method: "POST",
+          body: buildFormData(row),
+          credentials: "same-origin",
+          redirect: "follow",
+        });
+        if (!response.ok) {
+          throw new Error(`${response.status} ${response.statusText}`);
+        }
+      }
+      window.location.href = `${window.location.pathname}#${sectionName}`;
+      window.location.reload();
+    } catch (error) {
+      allowSubmit = false;
+      button.disabled = false;
+      button.textContent = originalText;
+      window.alert(`一括反映に失敗しました。個別に更新するか、入力内容を確認してください。\n${error.message}`);
+    }
+  }
+
+  function createBulkButtons() {
+    Object.entries(sectionLabels).forEach(([sectionName, label]) => {
+      const section = document.getElementById(sectionName);
+      if (!section) {
+        return;
+      }
+      const title = section.matches("h1, h2, h3, h4, h5, h6")
+        ? section
+        : section.querySelector("h2, h3");
+      if (!title || title.parentElement.querySelector(`[data-bulk-save='${sectionName}']`)) {
+        return;
+      }
+      const wrap = document.createElement("div");
+      wrap.className = "d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2";
+      title.parentElement.insertBefore(wrap, title);
+      wrap.appendChild(title);
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn btn-success btn-sm";
+      button.dataset.bulkSave = sectionName;
+      button.textContent = `${label}の変更を一括反映`;
+      button.hidden = true;
+      button.addEventListener("click", () => saveDirtyRows(sectionName, button));
+      wrap.appendChild(button);
+    });
+  }
+
+  function updateBulkButtons() {
+    document.querySelectorAll("[data-bulk-save]").forEach((button) => {
+      const sectionName = button.dataset.bulkSave;
+      const count = dirtyRowsInSection(sectionName).length;
+      button.hidden = count === 0;
+      if (count > 0 && !button.disabled) {
+        button.textContent = `${sectionLabels[sectionName] || "この表"}の変更を一括反映（${count}件）`;
+      }
+    });
+  }
+
+  createBulkButtons();
+
+  watchedRows.forEach((row) => {
+    watchedFields(row).forEach((field) => {
+      field.dataset.initialValue = fieldValue(field);
+      field.addEventListener("input", () => ensureDirtyMark(row));
+      field.addEventListener("change", () => ensureDirtyMark(row));
+    });
+    ensureDirtyMark(row);
+  });
+
+  document.querySelectorAll("[data-master-row] button").forEach((button) => {
+    button.addEventListener("click", () => {
+      allowSubmit = true;
+      window.setTimeout(() => {
+        allowSubmit = false;
+      }, 1000);
+    });
+  });
+
+  document.querySelectorAll("[data-master-row] form").forEach((form) => {
+    form.addEventListener("submit", () => {
+      allowSubmit = true;
+    });
+  });
+
+  updateBulkButtons();
+
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest("a[href]");
+    if (!link || link.target || link.href.startsWith("javascript:")) {
+      return;
+    }
+    if (hasDirtyForms() && !window.confirm(unsavedMessage)) {
+      event.preventDefault();
+    }
+  });
+
+  window.addEventListener("beforeunload", (event) => {
+    if (allowSubmit || !hasDirtyForms()) {
+      return;
+    }
+    event.preventDefault();
+    event.returnValue = "";
+  });
+})();
+</script>
+{% endblock %}

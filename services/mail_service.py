@@ -8,6 +8,7 @@ from email.utils import formataddr
 from flask import current_app, url_for
 
 from models import Inquiry
+from services.notification_context import attachment_lines, estimate_lines
 
 logger = logging.getLogger(__name__)
 
@@ -20,34 +21,6 @@ def _sender() -> str:
     company_name = current_app.config.get("COMPANY_NAME", "業務アプリ工房")
     mail_from = current_app.config.get("MAIL_FROM", "")
     return formataddr((company_name, mail_from)) if mail_from else ""
-
-
-def _estimate_lines(inquiry: Inquiry) -> list[str]:
-    estimate = inquiry.estimate
-    lines = [
-        f"受付番号: #{inquiry.id}",
-        f"見積ID: #{estimate.id}",
-        f"端末: {estimate.device_type}",
-        f"パック: {estimate.package_type}",
-        f"概算見積金額: {estimate.total_price:,}円（税抜）",
-        "",
-        "見積項目:",
-    ]
-    for item in estimate.items:
-        lines.append(f"- {item.item_name}: {item.price:,}円")
-    return lines
-
-
-def _attachment_lines(inquiry: Inquiry) -> list[str]:
-    if not inquiry.attachments:
-        return ["添付ファイル: なし"]
-
-    lines = ["添付ファイル:"]
-    for attachment in inquiry.attachments:
-        lines.append(f"- {attachment.file_name}")
-        if attachment.box_url:
-            lines.append(f"  保存先: {attachment.box_url}")
-    return lines
 
 
 def _admin_body(inquiry: Inquiry) -> str:
@@ -66,9 +39,9 @@ def _admin_body(inquiry: Inquiry) -> str:
         "問い合わせ内容:",
         inquiry.message or "-",
         "",
-        *_estimate_lines(inquiry),
+        *estimate_lines(inquiry),
         "",
-        *_attachment_lines(inquiry),
+        *attachment_lines(inquiry),
     ]
     return "\n".join(lines)
 
@@ -82,7 +55,7 @@ def _customer_body(inquiry: Inquiry) -> str:
         "以下の内容で受け付けました。",
         "担当者より折り返しご連絡いたします。",
         "",
-        *_estimate_lines(inquiry),
+        *estimate_lines(inquiry),
         "",
         "お問い合わせ内容:",
         inquiry.message or "-",

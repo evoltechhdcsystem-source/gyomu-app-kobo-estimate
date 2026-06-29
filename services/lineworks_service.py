@@ -9,36 +9,9 @@ from urllib.request import Request, urlopen
 from flask import current_app, url_for
 
 from models import Inquiry
+from services.notification_context import attachment_names, estimate_item_names
 
 logger = logging.getLogger(__name__)
-
-
-def _estimate_lines(inquiry: Inquiry) -> list[str]:
-    estimate = inquiry.estimate
-    lines = [
-        f"受付番号: #{inquiry.id}",
-        f"見積ID: #{estimate.id}",
-        f"端末: {estimate.device_type}",
-        f"パック: {estimate.package_type}",
-        f"概算見積金額: {estimate.total_price:,}円（税抜）",
-        "",
-        "見積項目:",
-    ]
-    for item in estimate.items:
-        lines.append(f"- {item.item_name}: {item.price:,}円")
-    return lines
-
-
-def _attachment_lines(inquiry: Inquiry) -> list[str]:
-    if not inquiry.attachments:
-        return ["添付ファイル: なし"]
-
-    lines = ["添付ファイル:"]
-    for attachment in inquiry.attachments:
-        lines.append(f"- {attachment.file_name}")
-        if attachment.box_url:
-            lines.append(f"  保存先: {attachment.box_url}")
-    return lines
 
 
 def _admin_detail_url(inquiry: Inquiry) -> str:
@@ -55,8 +28,8 @@ def _admin_detail_url(inquiry: Inquiry) -> str:
 
 def _notification_text(inquiry: Inquiry) -> str:
     estimate = inquiry.estimate
-    item_names = [item.item_name for item in estimate.items]
-    attachment_names = [attachment.file_name for attachment in inquiry.attachments]
+    item_names = estimate_item_names(inquiry)
+    file_names = attachment_names(inquiry)
     lines = [
         "問い合わせ、詳細見積りの依頼が送信されました。",
         "",
@@ -77,7 +50,7 @@ def _notification_text(inquiry: Inquiry) -> str:
         ", ".join(item_names) if item_names else "-",
         "",
         "添付ファイル:",
-        ", ".join(attachment_names) if attachment_names else "なし",
+        ", ".join(file_names) if file_names else "なし",
     ]
     return "\n".join(lines)
 

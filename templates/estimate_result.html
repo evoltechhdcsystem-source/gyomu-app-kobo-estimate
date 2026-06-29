@@ -184,79 +184,12 @@
         </div>
 
         <div class="result-item-list">
-          {% if estimate.package_type == "基本パック" %}
-            <div class="package-feature-table result-package-feature-table" role="table" aria-label="基本パックの画面と付属機能">
-              <div class="package-feature-row package-feature-row-head" role="row">
-                <div role="columnheader">画面</div>
-                <div role="columnheader">付属機能</div>
-              </div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">記録を入力する画面</div>
-                <div role="cell">
-                  <span class="package-feature-chip is-create">データ登録機能</span>
-                </div>
-              </div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">入力した記録を一覧で見る画面</div>
-                <div role="cell"></div>
-              </div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">記録の詳しい内容を見る画面</div>
-                <div role="cell">
-                  <span class="package-feature-chip is-edit">データ編集機能</span>
-                  <span class="package-feature-chip is-delete">データ削除機能</span>
-                </div>
-              </div>
-            </div>
-          {% elif estimate.package_type == "運用パック" %}
-            <div class="package-feature-table result-package-feature-table" role="table" aria-label="運用パックの画面と付属機能">
-              <div class="package-feature-row package-feature-row-head" role="row">
-                <div role="columnheader">画面</div>
-                <div role="columnheader">付属機能</div>
-              </div>
-              <div class="package-feature-section" role="rowgroup">通常利用</div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">記録を入力する画面</div>
-                <div role="cell">
-                  <span class="package-feature-chip is-create">データ登録機能</span>
-                </div>
-              </div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">入力した記録を一覧で見る画面</div>
-                <div role="cell"></div>
-              </div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">入力した記録の検索画面</div>
-                <div role="cell">
-                  <span class="package-feature-chip is-search">データ検索機能</span>
-                </div>
-              </div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">記録の詳しい内容を見る画面</div>
-                <div role="cell">
-                  <span class="package-feature-chip is-edit">データ編集機能</span>
-                  <span class="package-feature-chip is-delete">データ削除機能</span>
-                </div>
-              </div>
-              <div class="package-feature-section" role="rowgroup">管理者向け</div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">管理用の情報を入力する画面</div>
-                <div role="cell">
-                  <span class="package-feature-chip is-create">データ登録機能</span>
-                </div>
-              </div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">管理用の情報を一覧で見る画面</div>
-                <div role="cell"></div>
-              </div>
-              <div class="package-feature-row" role="row">
-                <div role="cell">管理用の情報の詳しい内容を見る画面</div>
-                <div role="cell">
-                  <span class="package-feature-chip is-edit">データ編集機能</span>
-                  <span class="package-feature-chip is-delete">データ削除機能</span>
-                </div>
-              </div>
-            </div>
+          {% set current_package_screens = package_screen_definitions.get(estimate.package_type, []) %}
+          {% if current_package_screens %}
+            {% set package_name = estimate.package_type %}
+            {% set screen_definitions = current_package_screens %}
+            {% set extra_class = "result-package-feature-table" %}
+            {% include "_package_screen_table.html" %}
           {% elif estimate.package_type == "カスタムパック" %}
             <div class="result-item-head has-price">
               <span>画面・機能</span>

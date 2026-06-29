@@ -1,0 +1,21 @@
+<div class="package-feature-table {{ extra_class|default('') }}" role="table" aria-label="{{ package_name }}の画面と付属機能">
+  <div class="package-feature-row package-feature-row-head" role="row">
+    <div role="columnheader">画面</div>
+    <div role="columnheader">付属機能</div>
+  </div>
+  {% set section = namespace(name="") %}
+  {% for row in screen_definitions %}
+    {% if row.section_title and row.section_title != section.name %}
+      <div class="package-feature-section" role="rowgroup">{{ row.section_title }}</div>
+      {% set section.name = row.section_title %}
+    {% endif %}
+    <div class="package-feature-row" role="row">
+      <div role="cell">{{ row.screen_name }}</div>
+      <div role="cell">
+        {% for feature in row.features %}
+          <span class="package-feature-chip {{ feature.css_class }}">{{ feature.label }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
