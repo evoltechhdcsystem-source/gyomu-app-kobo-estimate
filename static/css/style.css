@@ -174,8 +174,31 @@ main > section {
   grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   gap: 28px;
-  padding-block: 32px 48px;
+  padding-block: 32px 28px;
   text-align: center;
+}
+
+.top-footer {
+  padding: 0 0 28px;
+  background: #f7f1e9;
+}
+
+.top-footer .container {
+  display: flex;
+  justify-content: center;
+}
+
+.top-footer a {
+  color: var(--muted);
+  font-size: .86rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.top-footer a:hover,
+.top-footer a:focus-visible {
+  color: var(--brand-dark);
 }
 
 .home-page .hero-inner {
@@ -434,7 +457,7 @@ main > section {
   .top-cta-row {
     display: grid;
     width: min(520px, calc(100vw - 48px));
-    gap: 14px;
+    gap: 24px;
   }
 
   .top-logo-hero .top-start-button,
@@ -2891,7 +2914,7 @@ a.progress-step:hover {
 
   .home-hero {
     min-height: auto;
-    padding-block: 26px 38px;
+    padding-block: 26px 24px;
     text-align: center;
   }
 
@@ -2920,7 +2943,7 @@ a.progress-step:hover {
   .top-cta-row {
     display: grid;
     width: min(100%, 290px);
-    gap: 12px;
+    gap: 22px;
     margin-top: 8px;
   }
 

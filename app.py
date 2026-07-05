@@ -123,8 +123,8 @@ def create_app() -> Flask:
             "COMPANY_ADDRESS",
             "〒435-0042 静岡県浜松市中央区篠ケ瀬町32",
         ),
-        COMPANY_PHONE=os.getenv("COMPANY_PHONE", "053-401-6201"),
-        COMPANY_EMAIL=os.getenv("COMPANY_EMAIL") or os.getenv("MAIL_TO") or "katayama-y@evoltech.co.jp",
+        COMPANY_PHONE=os.getenv("COMPANY_PHONE", "053-424-6200"),
+        COMPANY_EMAIL=os.getenv("COMPANY_EMAIL") or os.getenv("MAIL_TO") or "info@evoltech-hdc-system.com",
     )
 
     db.init_app(app)

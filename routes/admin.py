@@ -40,6 +40,7 @@ FEATURE_CATEGORY_OPTIONS = ["基本機能", "外部連携", "導入サポート"
 FEATURE_ICON_OPTIONS = [
     "feature-add.svg",
     "feature-ai.svg",
+    "feature-backup.svg",
     "feature-delete.svg",
     "feature-edit.svg",
     "feature-link.svg",
@@ -48,6 +49,8 @@ FEATURE_ICON_OPTIONS = [
     "feature-manual.svg",
     "feature-search.svg",
     "feature-store.svg",
+    "feature-support.svg",
+    "feature-onsite-support.svg",
     "feature-table.svg",
 ]
 PACKAGE_IMAGE_OPTIONS = [
