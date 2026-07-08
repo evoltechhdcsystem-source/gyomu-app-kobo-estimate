@@ -27,7 +27,7 @@ jobs:
             --parameters 'commands=[
               "set -e",
               "sudo systemctl stop estimate || true",
-              "sudo -u deploy bash -lc '\''cd /opt/apps/estimate && git fetch origin main && git reset --hard origin/main && rm -rf .venv && python3 -m venv .venv && source .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt && deactivate'\''",
+              "sudo -u deploy bash -lc '\''set -e; PYTHON_BIN=/opt/python/3.11.9/bin/python3.11; test -x \"$PYTHON_BIN\" || { echo \"Python 3.11.9 not found at $PYTHON_BIN\"; exit 1; }; \"$PYTHON_BIN\" --version; cd /opt/apps/estimate && git fetch origin main && git reset --hard origin/main && rm -rf .venv && \"$PYTHON_BIN\" -m venv .venv && source .venv/bin/activate && python --version && pip install --upgrade pip && pip install -r requirements.txt && deactivate'\''",
               "sudo systemctl restart estimate",
               "sudo systemctl status estimate --no-pager"
             ]' \
