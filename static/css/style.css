@@ -179,13 +179,20 @@ main > section {
 }
 
 .top-footer {
-  padding: 0 0 28px;
-  background: #f7f1e9;
+  position: fixed;
+  right: clamp(16px, 3vw, 32px);
+  bottom: clamp(14px, 3vw, 28px);
+  z-index: 20;
+  padding: 0;
+  background: transparent;
 }
 
 .top-footer .container {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
+  width: auto;
+  max-width: none;
+  padding: 0;
 }
 
 .top-footer a {
