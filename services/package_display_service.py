@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import re
+
 from flask import has_app_context
 
 from models import (
+    SIMPLE_PLAN,
     PackageDisplayItemMaster,
     PackageMaster,
     PackageScreenDefinitionMaster,
@@ -113,25 +116,25 @@ DEFAULT_PACKAGE_SCREEN_DEFINITIONS: dict[str, list[dict[str, object]]] = {
 }
 
 
-def package_choice_cards() -> list[dict[str, object]]:
-    current_package_screens = package_screens()
+def package_choice_cards(plan_key: str = SIMPLE_PLAN) -> list[dict[str, object]]:
+    current_package_screens = package_screens(plan_key)
     if not has_app_context():
         return _fallback_package_cards(current_package_screens)
 
     packages = (
         PackageMaster.query
-        .filter_by(is_active=True)
+        .filter_by(is_active=True, plan_key=plan_key)
         .order_by(PackageMaster.sort_order, PackageMaster.id)
         .all()
     )
     if not packages:
-        return _fallback_package_cards(current_package_screens)
+        return []
 
     fallback_cards = {card["name"]: card for card in DEFAULT_PACKAGE_CARDS}
     cards: list[dict[str, object]] = []
     for package in packages:
-        fallback = fallback_cards.get(package.name, {})
-        screen_count = current_package_screens.get(package.name, package.screen_count)
+        fallback = fallback_cards.get(package.public_name, {})
+        screen_count = current_package_screens.get(package.public_name, package.screen_count)
         items = [
             {"text": row.text, "section": row.is_section}
             for row in PackageDisplayItemMaster.query
@@ -141,22 +144,22 @@ def package_choice_cards() -> list[dict[str, object]]:
         ]
         cards.append(
             {
-                "name": package.name,
+                "name": package.public_name,
                 "data_screens": screen_count or 1,
-                "price_label": package.price_label or fallback.get("price_label") or _screen_price_label(screen_count),
+                "price_label": _package_price_label(package.price_label, screen_count, package.public_name),
                 "image_file": package.image_file or fallback.get("image_file") or "img/package-custom-generated.png",
-                "image_alt": package.image_alt or fallback.get("image_alt") or f"{package.name}のイメージ",
+                "image_alt": package.image_alt or fallback.get("image_alt") or f"{package.public_name}のイメージ",
                 "summary": package.summary or fallback.get("summary") or "マスターに追加されたパックです。",
                 "detail_title": package.detail_title or fallback.get("detail_title") or "入っている内容",
                 "modal_target": package.modal_target if package.modal_target is not None else fallback.get("modal_target", ""),
-                "items": items or fallback.get("items") or [{"text": "パック内容は管理マスターを確認してください"}],
+                "items": items,
                 "example": package.example or fallback.get("example") or "例: 個別に定義した業務パック",
             }
         )
     return cards
 
 
-def package_screen_definitions_by_package() -> dict[str, list[dict[str, object]]]:
+def package_screen_definitions_by_package(plan_key: str = SIMPLE_PLAN) -> dict[str, list[dict[str, object]]]:
     if not has_app_context():
         return DEFAULT_PACKAGE_SCREEN_DEFINITIONS
     rows = (
@@ -164,15 +167,16 @@ def package_screen_definitions_by_package() -> dict[str, list[dict[str, object]]
         .join(PackageMaster)
         .filter(PackageScreenDefinitionMaster.is_active.is_(True))
         .filter(PackageMaster.is_active.is_(True))
+        .filter(PackageMaster.plan_key == plan_key)
         .order_by(PackageMaster.sort_order, PackageScreenDefinitionMaster.sort_order, PackageScreenDefinitionMaster.id)
         .all()
     )
     if not rows:
-        return DEFAULT_PACKAGE_SCREEN_DEFINITIONS
+        return {}
 
     definitions: dict[str, list[dict[str, object]]] = {}
     for row in rows:
-        definitions.setdefault(row.package.name, []).append(
+        definitions.setdefault(row.package.public_name, []).append(
             {
                 "section_title": row.section_title or "",
                 "screen_name": row.screen_name,
@@ -188,7 +192,7 @@ def package_screen_definitions_by_package() -> dict[str, list[dict[str, object]]
                 ],
             }
         )
-    return definitions or DEFAULT_PACKAGE_SCREEN_DEFINITIONS
+    return definitions
 
 
 def _fallback_package_cards(current_package_screens: dict[str, int]) -> list[dict[str, object]]:
@@ -219,3 +223,9 @@ def _fallback_package_cards(current_package_screens: dict[str, int]) -> list[dic
 
 def _screen_price_label(screen_count: int) -> str:
     return f"{screen_count}画面" if screen_count else "画面数・機能を指定"
+
+
+def _package_price_label(label: str | None, screen_count: int, package_name: str) -> str:
+    if package_name != "カスタムパック" and (not label or re.fullmatch(r"\d+画面", label)):
+        return f"{screen_count}画面"
+    return label or _screen_price_label(screen_count)

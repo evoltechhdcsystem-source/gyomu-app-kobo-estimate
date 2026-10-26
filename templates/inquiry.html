@@ -89,9 +89,25 @@
       </div>
 
       <div class="summary-panel inquiry-summary sticky-lg-top">
-        <div class="small text-secondary">送信される見積り</div>
+        <div class="small text-secondary">送信される見積り・初期費用</div>
         <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></div>
+        {% if estimate.plan_key == 'full' %}
+          <p class="mb-1">サーバー保守：{% if estimate.maintenance_monthly_price is not none %}<strong>{{ estimate.maintenance_price_label }}（税抜）</strong>{% else %}未選択{% endif %}</p>
+          <p class="small text-secondary">保守は初期費用とは別の月額費用です。Google Cloud利用料も別途かかります。</p>
+        {% endif %}
+        {% if estimate.has_quote_required_items %}<p class="quote-estimate-note">要相談の機能は上記金額に含まれません。詳細お見積りで金額をご案内します。</p>{% endif %}
         <div class="inquiry-summary-visuals">
+          <div class="inquiry-summary-card">
+            {% if estimate.plan_key == 'full' %}
+              <img src="{{ url_for('static', filename='img/plan-full-generated.png') }}" alt="しっかりアプリプランのイメージ">
+            {% else %}
+              <img src="{{ url_for('static', filename='img/plan-simple-generated.png') }}" alt="かんたんアプリプランのイメージ">
+            {% endif %}
+            <div>
+              <span>プラン</span>
+              <strong>{{ plan.name if plan else ('しっかりアプリプラン' if estimate.plan_key == 'full' else 'かんたんアプリプラン') }}</strong>
+            </div>
+          </div>
           <div class="inquiry-summary-card">
             {% if estimate.device_type == "PC" %}
               <img src="{{ url_for('static', filename='img/device-pc-generated.png') }}" alt="PC向け">
@@ -124,7 +140,7 @@
           {% for item in estimate.items %}
             <span class="inquiry-summary-item">
               <span>{{ estimate_item_label(item.item_name) }}</span>
-              <strong>{{ "{:,}".format(item.price) }}円</strong>
+              <strong>{{ item.price_label }}</strong>
             </span>
           {% endfor %}
         </div>

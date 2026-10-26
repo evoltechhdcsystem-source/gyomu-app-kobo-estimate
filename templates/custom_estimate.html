@@ -15,7 +15,18 @@
 
   <form method="post" class="wizard-form custom-estimate-form" id="customEstimateForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="selected-estimate-visuals">
+    <div class="selected-estimate-visuals selected-estimate-visuals-three">
+      <div class="selected-estimate-card">
+        {% if flow.plan_key == 'full' %}
+          <img src="{{ url_for('static', filename='img/plan-full-generated.png') }}" alt="しっかりアプリプランのイメージ">
+        {% else %}
+          <img src="{{ url_for('static', filename='img/plan-simple-generated.png') }}" alt="かんたんアプリプランのイメージ">
+        {% endif %}
+        <div>
+          <span>選択中のプラン</span>
+          <strong>{{ plan.name if plan else flow.plan_key }}</strong>
+        </div>
+      </div>
       <div class="selected-estimate-card">
         {% if flow.device_type == "PC" %}
           <img src="{{ url_for('static', filename='img/device-pc-generated.png') }}" alt="PC向け">
@@ -64,7 +75,7 @@
             <div class="feature-grid">
               {% for name, price in category.features %}
                 <label class="feature-row">
-                  <input class="form-check-input" type="checkbox" name="features" value="{{ name }}" data-price="{{ price }}" data-quantity-enabled="{{ 'true' if name in multiple_feature_names else 'false' }}" {% if name in flow.features|default([]) %}checked{% endif %}>
+                  <input class="form-check-input" type="checkbox" name="features" value="{{ name }}" data-price="{{ 0 if name in quote_feature_names else price }}" data-quote-required="{{ 'true' if name in quote_feature_names else 'false' }}" data-quantity-enabled="{{ 'true' if name in multiple_feature_names else 'false' }}" {% if name in flow.features|default([]) %}checked{% endif %}>
                   <img class="feature-point-icon" src="{{ url_for('static', filename='img/' ~ feature_icon_files.get(name, 'feature-add.svg')) }}" alt="">
                   <span class="feature-copy">
                     <strong class="feature-name">{{ name }}</strong>
@@ -74,13 +85,13 @@
                       type="button"
                       data-feature-detail-trigger
                       data-feature-name="{{ name }}"
-                      data-feature-price="{{ "{:,}".format(price) }}円"
+                      data-feature-price="{{ '要相談' if name in quote_feature_names else '{:,}円'.format(price) }}"
                       data-feature-description="{{ feature_descriptions.get(name, "この機能を追加できます。") }}"
                       data-feature-condition="{{ feature_conditions.get(name, "内容により個別確認") }}"
                     >条件・詳細</button>
                   </span>
                   <span class="feature-price">
-                    <strong>{{ "{:,}".format(price) }}円</strong>
+                    <strong>{{ '要相談' if name in quote_feature_names else '{:,}円'.format(price) }}</strong>
                     {% if name in multiple_feature_names %}
                       <span class="feature-quantity">
                         <span>数量</span>
@@ -111,6 +122,7 @@
         <span>現在の見積り金額</span>
         <strong data-estimate-total>{{ "{:,}".format(estimate_status.total_price) }}円<span class="tax-note">（税抜）</span></strong>
       </div>
+      <p class="quote-price-note" data-quote-price-note hidden>選択した「要相談」の機能は上記金額に含まれません。詳細お見積りで金額をご案内します。</p>
     </div>
 
     <div class="wizard-actions result-action">
@@ -169,7 +181,7 @@
               <strong>データ登録</strong>
               <small><span class="help-icon" aria-hidden="true">?</span>新しい情報を入力フォームから追加できます。</small>
               <button class="feature-detail-button" type="button" tabindex="-1">条件・詳細</button>
-              <strong class="feature-guide-price">20,000円</strong>
+              {% if 'データ登録' in feature_prices %}<strong class="feature-guide-price">{{ '要相談' if 'データ登録' in quote_feature_names else '{:,}円'.format(feature_prices['データ登録']) }}</strong>{% endif %}
             </div>
             <div class="feature-guide-quantity">
               <span>数量</span>

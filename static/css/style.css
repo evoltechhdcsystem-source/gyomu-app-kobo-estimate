@@ -770,6 +770,10 @@ main > section {
   gap: 12px;
 }
 
+.selected-estimate-visuals-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .selected-estimate-card {
   display: grid;
   grid-template-columns: 116px minmax(0, 1fr);
@@ -853,6 +857,34 @@ main > section {
 .choice-card {
   display: grid;
   gap: 7px;
+}
+
+.plan-choice-card {
+  grid-template-rows: auto auto auto auto 1fr auto;
+  align-items: start;
+  align-content: start;
+  gap: 14px;
+}
+
+.plan-choice-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.plan-choice-copy > strong {
+  color: var(--brand-dark);
+  line-height: 1.5;
+}
+
+.plan-choice-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .92rem;
+  line-height: 1.8;
+}
+
+.plan-choice-card .choice-example {
+  margin-bottom: 0;
 }
 
 .package-card {
@@ -1840,6 +1872,69 @@ textarea.form-control {
   gap: 18px;
 }
 
+.maintenance-option-panel {
+  margin: 16px 0;
+  padding: 12px;
+  border: 2px solid var(--brand);
+  border-radius: 8px;
+  background: var(--brand-pale);
+}
+
+.result-side .cost-section-title {
+  margin: 0 0 6px;
+  color: var(--navy);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.maintenance-option-form {
+  margin: 0;
+}
+
+[data-maintenance-dependent][aria-disabled="true"] { opacity: .55; cursor: wait; }
+[data-maintenance-print][hidden] { display: none !important; }
+
+.maintenance-option-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 6px;
+  cursor: pointer;
+}
+
+.maintenance-option-row .form-check-input { margin: 0; flex-shrink: 0; }
+.maintenance-option-price { margin-left: auto; color: var(--brand-dark); font-weight: 900; }
+.maintenance-option-price small { font-size: .75rem; font-weight: 400; }
+
+.result-detail-card .selected-estimate-card {
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+}
+
+.result-detail-card .selected-estimate-card img {
+  max-width: 80px;
+}
+
+.result-detail-card .selected-estimate-card strong {
+  font-size: 1rem;
+}
+
+.quote-estimate-note {
+  margin: 8px 0 0;
+  color: var(--brand-dark);
+  font-size: .88rem;
+  font-weight: 800;
+}
+
+@media (min-width: 901px) and (max-width: 1199px) {
+  .result-detail-card .selected-estimate-visuals-three {
+    grid-template-columns: 1fr;
+  }
+}
+
 .print-estimate-sheet {
   display: none;
 }
@@ -2163,6 +2258,11 @@ textarea.form-control {
   font-size: .9rem;
   font-weight: 800;
   line-height: 1.45;
+}
+
+.result-side .included-work-note {
+  margin-bottom: 0;
+  border-bottom: 0;
 }
 
 .license-note strong,
@@ -2656,6 +2756,15 @@ a.progress-step:hover {
   white-space: nowrap;
 }
 
+.custom-price-bar .quote-price-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--brand-dark);
+  font-size: .82rem;
+  font-weight: 800;
+  text-align: center;
+}
+
 .flow-line span {
   min-height: 64px;
   display: grid;
@@ -3032,7 +3141,8 @@ a.progress-step:hover {
     align-items: stretch;
   }
 
-  .selected-estimate-visuals {
+  .selected-estimate-visuals,
+  .selected-estimate-visuals-three {
     grid-template-columns: 1fr;
   }
 

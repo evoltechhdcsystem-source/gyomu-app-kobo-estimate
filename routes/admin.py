@@ -19,10 +19,12 @@ from flask import (
     url_for,
 )
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 
 from models import (
     DevicePriceMaster,
     Estimate,
+    FeatureDevicePriceMaster,
     FeatureMaster,
     Inquiry,
     InquiryAttachment,
@@ -31,6 +33,9 @@ from models import (
     PackageMaster,
     PackageScreenDefinitionMaster,
     PackageScreenFeatureDefinitionMaster,
+    PlanMaster,
+    SIMPLE_PLAN,
+    stored_master_name,
     db,
 )
 
@@ -40,14 +45,26 @@ FEATURE_CATEGORY_OPTIONS = ["基本機能", "外部連携", "導入サポート"
 FEATURE_ICON_OPTIONS = [
     "feature-add.svg",
     "feature-ai.svg",
+    "feature-attachment.svg",
     "feature-backup.svg",
+    "feature-camera.svg",
+    "feature-code-scan.svg",
+    "feature-csv-export.svg",
+    "feature-dashboard.svg",
+    "feature-data-transform.svg",
     "feature-delete.svg",
     "feature-edit.svg",
     "feature-link.svg",
     "feature-login.svg",
+    "feature-logs.svg",
     "feature-mail.svg",
     "feature-manual.svg",
+    "feature-map.svg",
+    "feature-network.svg",
+    "feature-pdf-export.svg",
+    "feature-permissions.svg",
     "feature-search.svg",
+    "feature-server-maintenance.svg",
     "feature-store.svg",
     "feature-support.svg",
     "feature-onsite-support.svg",
@@ -95,7 +112,7 @@ def _form_anchor(default: str = "") -> str:
 
 
 def _redirect_masters(anchor: str = ""):
-    return redirect(url_for("admin.masters", _anchor=anchor or None))
+    return redirect(url_for("admin.masters", plan=request.form.get("plan_key", SIMPLE_PLAN), _anchor=anchor or None))
 
 
 def _commit_master_changes(success_message: str) -> bool:
@@ -113,6 +130,7 @@ def _modal_target_conflicts(modal_target: str, exclude_package_id: int | None = 
     if not modal_target:
         return False
     query = PackageMaster.query.filter(PackageMaster.modal_target == modal_target)
+    query = query.filter(PackageMaster.plan_key == request.form.get("plan_key", SIMPLE_PLAN))
     if exclude_package_id is not None:
         query = query.filter(PackageMaster.id != exclude_package_id)
     return db.session.query(query.exists()).scalar()
@@ -164,33 +182,49 @@ def dashboard():
 def masters():
     if not admin_required():
         return redirect(url_for("admin.login"))
-    device_prices = DevicePriceMaster.query.order_by(DevicePriceMaster.sort_order, DevicePriceMaster.id).all()
-    packages = PackageMaster.query.order_by(PackageMaster.sort_order, PackageMaster.id).all()
-    features = FeatureMaster.query.order_by(FeatureMaster.sort_order, FeatureMaster.id).all()
+    selected_plan = request.args.get("plan", SIMPLE_PLAN)
+    plans = PlanMaster.query.all()
+    if selected_plan not in {plan.key for plan in plans}:
+        selected_plan = SIMPLE_PLAN
+    device_prices = DevicePriceMaster.query.filter_by(plan_key=selected_plan).order_by(DevicePriceMaster.sort_order, DevicePriceMaster.id).all()
+    packages = PackageMaster.query.filter_by(plan_key=selected_plan).order_by(PackageMaster.sort_order, PackageMaster.id).all()
+    features = FeatureMaster.query.filter_by(plan_key=selected_plan).order_by(FeatureMaster.sort_order, FeatureMaster.id).all()
+    screen_item_feature = next((row for row in features if row.public_name == "画面表示項目追加"), None)
+    screen_item_device_prices = {
+        row.device_id: row.unit_price
+        for row in (screen_item_feature.device_prices if screen_item_feature else [])
+    }
     package_features = (
         PackageFeatureMaster.query
         .join(PackageMaster)
         .join(FeatureMaster)
+        .filter(PackageMaster.plan_key == selected_plan)
         .order_by(PackageMaster.sort_order, PackageFeatureMaster.sort_order, PackageFeatureMaster.id)
         .all()
     )
     package_display_items = (
         PackageDisplayItemMaster.query
         .join(PackageMaster)
+        .filter(PackageMaster.plan_key == selected_plan)
         .order_by(PackageMaster.sort_order, PackageDisplayItemMaster.sort_order, PackageDisplayItemMaster.id)
         .all()
     )
     package_screen_definitions = (
         PackageScreenDefinitionMaster.query
         .join(PackageMaster)
+        .filter(PackageMaster.plan_key == selected_plan)
         .order_by(PackageMaster.sort_order, PackageScreenDefinitionMaster.sort_order, PackageScreenDefinitionMaster.id)
         .all()
     )
     return render_template(
         "admin_masters.html",
+        plans=plans,
+        selected_plan=selected_plan,
         device_prices=device_prices,
         packages=packages,
         features=features,
+        screen_item_feature=screen_item_feature,
+        screen_item_device_prices=screen_item_device_prices,
         package_features=package_features,
         package_display_items=package_display_items,
         package_screen_definitions=package_screen_definitions,
@@ -199,6 +233,20 @@ def masters():
         package_image_options=PACKAGE_IMAGE_OPTIONS,
         package_chip_class_options=PACKAGE_CHIP_CLASS_OPTIONS,
     )
+
+
+@admin_bp.post("/masters/plans/<plan_key>")
+def update_plan_master(plan_key: str):
+    if not admin_required():
+        return redirect(url_for("admin.login"))
+    plan = db.session.get(PlanMaster, plan_key)
+    if plan is None:
+        abort(404)
+    plan.name = request.form.get("name", "").strip() or plan.name
+    plan.is_active = _form_bool("is_active")
+    db.session.commit()
+    flash("プラン設定を更新しました。", "success")
+    return _redirect_masters("plan-settings")
 
 
 @admin_bp.post("/masters/devices")
@@ -211,7 +259,8 @@ def create_device_master():
         return _redirect_masters(_form_anchor("device-prices"))
     db.session.add(
         DevicePriceMaster(
-            name=name,
+            name=stored_master_name(request.form.get("plan_key", SIMPLE_PLAN), name),
+            plan_key=request.form.get("plan_key", SIMPLE_PLAN),
             screen_unit_price=max(_as_int(request.form.get("screen_unit_price")), 0),
             sort_order=_as_int(request.form.get("sort_order"), 100),
             is_active=_form_bool("is_active"),
@@ -230,7 +279,7 @@ def update_device_master(master_id: int):
         db.session.delete(master)
         _commit_master_changes("端末単価マスターを削除しました。")
         return _redirect_masters(_form_anchor("device-prices"))
-    master.name = request.form.get("name", "").strip() or master.name
+    master.name = stored_master_name(master.plan_key, request.form.get("name", "").strip() or master.public_name)
     master.screen_unit_price = max(_as_int(request.form.get("screen_unit_price")), 0)
     master.sort_order = _as_int(request.form.get("sort_order"), master.sort_order)
     master.is_active = _form_bool("is_active")
@@ -251,7 +300,8 @@ def create_package_master():
         return _redirect_masters(_form_anchor("packages"))
     db.session.add(
         PackageMaster(
-            name=name,
+            name=stored_master_name(request.form.get("plan_key", SIMPLE_PLAN), name),
+            plan_key=request.form.get("plan_key", SIMPLE_PLAN),
             screen_count=max(_as_int(request.form.get("screen_count")), 0),
             price_label=request.form.get("price_label", "").strip(),
             image_file=request.form.get("image_file", "").strip(),
@@ -277,10 +327,14 @@ def update_package_master(master_id: int):
         db.session.delete(master)
         _commit_master_changes("パックマスターを削除しました。")
         return _redirect_masters(_form_anchor("packages"))
+    requested_name = request.form.get("name", "").strip() or master.public_name
+    if master.public_name in {"基本パック", "運用パック", "カスタムパック"} and requested_name != master.public_name:
+        flash("標準パックの名前は変更できません。プランごとの内容は下のマスターから変更できます。", "danger")
+        return _redirect_masters(_form_anchor("packages"))
     modal_target = request.form.get("modal_target", "").strip()
     if not _validate_unique_modal_target(modal_target, master.id):
         return _redirect_masters(_form_anchor("packages"))
-    master.name = request.form.get("name", "").strip() or master.name
+    master.name = stored_master_name(master.plan_key, requested_name)
     master.screen_count = max(_as_int(request.form.get("screen_count")), 0)
     master.price_label = request.form.get("price_label", "").strip()
     master.image_file = request.form.get("image_file", "").strip()
@@ -305,8 +359,10 @@ def create_feature_master():
         return _redirect_masters(_form_anchor("features"))
     db.session.add(
         FeatureMaster(
-            name=name,
+            name=stored_master_name(request.form.get("plan_key", SIMPLE_PLAN), name),
+            plan_key=request.form.get("plan_key", SIMPLE_PLAN),
             unit_price=max(_as_int(request.form.get("unit_price")), 0),
+            is_quote_required=_form_bool("is_quote_required"),
             allow_quantity=_form_bool("allow_quantity"),
             category_name=request.form.get("category_name", "").strip(),
             description=request.form.get("description", "").strip(),
@@ -329,8 +385,18 @@ def update_feature_master(master_id: int):
         db.session.delete(master)
         _commit_master_changes("追加機能マスターを削除しました。")
         return _redirect_masters(_form_anchor("features"))
-    master.name = request.form.get("name", "").strip() or master.name
+    device_prices_to_save: dict[int, int | None] = {}
+    if master.public_name == "画面表示項目追加" and request.form.get("update_device_prices") == "1":
+        devices = DevicePriceMaster.query.filter_by(plan_key=master.plan_key).all()
+        for device in devices:
+            price_text = request.form.get(f"device_price[{device.id}]")
+            if price_text is None or (price_text.strip() and not price_text.strip().isdecimal()):
+                flash("端末別単価は空欄、または0以上の整数で入力してください。", "danger")
+                return _redirect_masters("features")
+            device_prices_to_save[device.id] = int(price_text.strip()) if price_text.strip() else None
+    master.name = stored_master_name(master.plan_key, request.form.get("name", "").strip() or master.public_name)
     master.unit_price = max(_as_int(request.form.get("unit_price")), 0)
+    master.is_quote_required = _form_bool("is_quote_required")
     master.allow_quantity = _form_bool("allow_quantity")
     master.category_name = request.form.get("category_name", "").strip()
     master.description = request.form.get("description", "").strip()
@@ -338,8 +404,49 @@ def update_feature_master(master_id: int):
     master.icon_file = request.form.get("icon_file", "").strip()
     master.sort_order = _as_int(request.form.get("sort_order"), master.sort_order)
     master.is_active = _form_bool("is_active")
+    if device_prices_to_save:
+        existing_prices = {row.device_id: row for row in master.device_prices}
+        for device_id, unit_price in device_prices_to_save.items():
+            override = existing_prices.get(device_id)
+            if unit_price is None:
+                if override:
+                    db.session.delete(override)
+            elif override:
+                override.unit_price = unit_price
+            else:
+                db.session.add(FeatureDevicePriceMaster(
+                    feature_id=master.id, device_id=device_id, unit_price=unit_price,
+                ))
     _commit_master_changes("追加機能マスターを更新しました。")
     return _redirect_masters(_form_anchor("features"))
+
+
+@admin_bp.post("/masters/features/<int:feature_id>/devices/<int:device_id>/price")
+def update_feature_device_price(feature_id: int, device_id: int):
+    if not admin_required():
+        return redirect(url_for("admin.login"))
+    feature = FeatureMaster.query.get_or_404(feature_id)
+    device = DevicePriceMaster.query.get_or_404(device_id)
+    if feature.public_name != "画面表示項目追加" or feature.plan_key != device.plan_key:
+        abort(404)
+    anchor = "features"
+    price_text = request.form.get("unit_price", "").strip()
+    if price_text and not price_text.isdecimal():
+        flash("端末別単価は0以上の整数で入力してください。", "danger")
+        return _redirect_masters(anchor)
+    override = FeatureDevicePriceMaster.query.filter_by(feature_id=feature.id, device_id=device.id).first()
+    if not price_text:
+        if override:
+            db.session.delete(override)
+    elif override:
+        override.unit_price = int(price_text)
+    else:
+        db.session.add(FeatureDevicePriceMaster(
+            feature_id=feature.id, device_id=device.id, unit_price=int(price_text),
+        ))
+    db.session.commit()
+    flash("画面表示項目追加の端末別単価を更新しました。", "success")
+    return _redirect_masters(anchor)
 
 
 @admin_bp.post("/masters/package-features")
@@ -350,6 +457,11 @@ def create_package_feature_master():
     feature_id = _as_int(request.form.get("feature_id"))
     if not package_id or not feature_id:
         flash("パックと追加機能を選択してください。", "danger")
+        return _redirect_masters(_form_anchor("package-features"))
+    package = db.session.get(PackageMaster, package_id)
+    feature = db.session.get(FeatureMaster, feature_id)
+    if not package or not feature or package.plan_key != feature.plan_key or package.plan_key != request.form.get("plan_key"):
+        flash("同じプランのパックと追加機能を選択してください。", "danger")
         return _redirect_masters(_form_anchor("package-features"))
     existing = PackageFeatureMaster.query.filter_by(package_id=package_id, feature_id=feature_id).first()
     if existing:
@@ -506,10 +618,45 @@ def update_package_screen_feature_definition_master(master_id: int):
 def estimates():
     if not admin_required():
         return redirect(url_for("admin.login"))
-    rows = Estimate.query.order_by(Estimate.created_at.desc()).all()
+    query = Estimate.query
+    keyword = request.args.get("q", "").strip()
+    plan_key = request.args.get("plan", "").strip()
+    package_type = request.args.get("package", "").strip()
+    date_from = request.args.get("from", "").strip()
+    date_to = request.args.get("to", "").strip()
+    if keyword:
+        conditions = [Estimate.visitor_key.ilike(f"%{keyword}%"), Estimate.device_type.ilike(f"%{keyword}%")]
+        if keyword.lstrip("#").isdigit():
+            conditions.append(Estimate.id == int(keyword.lstrip("#")))
+        query = query.filter(or_(*conditions))
+    if plan_key:
+        query = query.filter(Estimate.plan_key == plan_key)
+    if package_type:
+        query = query.filter(Estimate.package_type == package_type)
+    for value, is_start in ((date_from, True), (date_to, False)):
+        try:
+            local_day = datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=JST)
+        except ValueError:
+            continue
+        cutoff = local_day.astimezone(UTC).replace(tzinfo=None)
+        query = query.filter(Estimate.created_at >= cutoff if is_start else Estimate.created_at < cutoff + timedelta(days=1))
+    rows = query.order_by(Estimate.created_at.desc()).all()
+    standard_packages = ["基本パック", "運用パック", "カスタムパック"]
+    master_package_names = {package.public_name for package in PackageMaster.query.all()}
+    historical_package_names = {
+        name for (name,) in db.session.query(Estimate.package_type).distinct().all() if name
+    }
+    other_package_names = sorted((master_package_names | historical_package_names) - set(standard_packages) - {"未選択"})
+    package_options = standard_packages + other_package_names
+    if "未選択" in historical_package_names:
+        package_options.append("未選択")
     return render_template(
         "admin_estimates.html",
         estimates=rows,
+        package_options=package_options,
+        plans=PlanMaster.query.all(),
+        plan_names={plan.key: plan.name for plan in PlanMaster.query.all()},
+        filters={"q": keyword, "plan": plan_key, "package": package_type, "from": date_from, "to": date_to},
         format_jst=format_jst,
         estimate_item_label=estimate_item_label,
     )
@@ -580,7 +727,7 @@ def export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "会社名", "担当者名", "メール", "電話番号", "ステータス", "見積り金額", "作成日時"])
+    writer.writerow(["ID", "会社名", "担当者名", "メール", "電話番号", "ステータス", "初期費用（税抜）", "作成日時", "サーバー保守（月額・税抜）"])
     for inquiry in Inquiry.query.order_by(Inquiry.created_at.desc()).all():
         writer.writerow(
             [
@@ -592,6 +739,7 @@ def export_csv():
                 inquiry.status,
                 inquiry.estimate.total_price,
                 format_jst(inquiry.created_at),
+                inquiry.estimate.maintenance_price_label if inquiry.estimate.maintenance_monthly_price is not None else "未選択",
             ]
         )
 

@@ -91,7 +91,7 @@ function bindWizardValidation() {
 
     form.addEventListener("change", (event) => {
       clearInlineError(form);
-      if (event.target.matches('input[type="radio"][name="device_type"], input[type="radio"][name="package_type"]')) {
+      if (event.target.matches('input[type="radio"][name="plan_key"], input[type="radio"][name="device_type"], input[type="radio"][name="package_type"]')) {
         focusNextButton(form);
       }
     });

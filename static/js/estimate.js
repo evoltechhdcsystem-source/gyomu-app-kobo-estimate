@@ -98,6 +98,10 @@ function bindCustomEstimate() {
     setScreenTotal(screenTotal);
     setFeatureTotal(featureTotal);
     setCurrentTotal(screenTotal + featureTotal);
+    const quoteNote = form.querySelector("[data-quote-price-note]");
+    if (quoteNote) {
+      quoteNote.hidden = !form.querySelector('input[name="features"][data-quote-required="true"]:checked');
+    }
   }
 
   form.addEventListener("change", update);

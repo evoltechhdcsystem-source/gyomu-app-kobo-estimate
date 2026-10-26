@@ -23,7 +23,7 @@
             <td>{{ inquiry.company_name }}</td>
             <td>{{ inquiry.person_name }}</td>
             <td>{{ inquiry.email }}</td>
-            <td>{{ "{:,}".format(inquiry.estimate.total_price) }}円</td>
+            <td>初期：{{ "{:,}".format(inquiry.estimate.total_price) }}円{% if inquiry.estimate.has_quote_required_items %}<br><small>＋要相談</small>{% endif %}{% if inquiry.estimate.maintenance_monthly_price is not none %}<br><small>保守：{{ inquiry.estimate.maintenance_price_label }}</small>{% endif %}</td>
             <td><span class="badge text-bg-light">{{ inquiry.status }}</span></td>
             <td>{{ format_jst(inquiry.created_at) }}</td>
           </tr>

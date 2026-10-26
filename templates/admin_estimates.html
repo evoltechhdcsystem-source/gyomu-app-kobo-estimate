@@ -5,15 +5,24 @@
   <div class="admin-head">
     <div>
       <h1>見積り履歴一覧</h1>
-      <p>見積り結果画面まで進んだ履歴を確認できます。</p>
+      <p>アクセスから見積り結果までの履歴を確認できます。</p>
     </div>
     <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">管理TOP</a>
   </div>
+  <form method="get" class="form-section mb-3 row g-2 align-items-end">
+    <div class="col-md-2"><label class="form-label">ID・端末・ユーザー識別子</label><input class="form-control" name="q" value="{{ filters.q }}"></div>
+    <div class="col-md-2"><label class="form-label">プラン</label><select class="form-select" name="plan"><option value="">すべて</option>{% for plan in plans %}<option value="{{ plan.key }}" {% if filters.plan == plan.key %}selected{% endif %}>{{ plan.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label" for="history-package">パック</label><select class="form-select" id="history-package" name="package"><option value="">すべて</option>{% for package_name in package_options %}<option value="{{ package_name }}" {% if filters.package == package_name %}selected{% endif %}>{{ package_name }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label">開始日</label><input class="form-control" type="date" name="from" value="{{ filters.from }}"></div>
+    <div class="col-md-2"><label class="form-label">終了日</label><input class="form-control" type="date" name="to" value="{{ filters.to }}"></div>
+    <div class="col-md-2"><button class="btn btn-primary" type="submit">検索</button> <a class="btn btn-outline-secondary" href="{{ url_for('admin.estimates') }}">解除</a></div>
+  </form>
   <div class="table-responsive">
     <table class="table table-hover align-middle admin-history-table">
       <thead>
         <tr>
           <th>ID</th>
+          <th>プラン</th>
           <th>デバイス</th>
           <th>パック</th>
           <th class="text-end">金額</th>
@@ -29,6 +38,7 @@
         {% for estimate in estimates %}
           <tr>
             <td>#{{ estimate.id }}</td>
+            <td>{{ plan_names.get(estimate.plan_key, '未選択' if estimate.plan_key == 'unselected' else estimate.plan_key) }}</td>
             <td>{{ estimate.device_type }}</td>
             <td>
               {% if estimate.items|length > 1 %}
@@ -38,7 +48,7 @@
                     {% for item in estimate.items %}
                       <li>
                         <span>{{ estimate_item_label(item.item_name) }}</span>
-                        <strong>{{ "{:,}".format(item.price) }}円</strong>
+                        <strong>{{ item.price_label }}</strong>
                       </li>
                     {% endfor %}
                   </ul>
@@ -47,7 +57,7 @@
                 {{ estimate.package_type }}
               {% endif %}
             </td>
-            <td class="text-end">{{ "{:,}".format(estimate.total_price) }}円</td>
+            <td class="text-end">初期：{{ "{:,}".format(estimate.total_price) }}円{% if estimate.has_quote_required_items %}<br><small>＋要相談</small>{% endif %}{% if estimate.maintenance_monthly_price is not none %}<br><small>保守：{{ estimate.maintenance_price_label }}</small>{% endif %}</td>
             <td>
               {% if estimate.inquiry %}
                 <a href="{{ url_for('admin.inquiry_detail', inquiry_id=estimate.inquiry.id, **{'from': 'estimates'}) }}">#{{ estimate.inquiry.id }}</a>
@@ -73,6 +83,7 @@
             <td>
               <dl class="history-step-list">
                 <div><dt>スタート</dt><dd>{{ format_jst(estimate.step_started_at) or "-" }}</dd></div>
+                <div><dt>プラン</dt><dd>{{ format_jst(estimate.step_plan_at) or "-" }}</dd></div>
                 <div><dt>端末</dt><dd>{{ format_jst(estimate.step_device_at) or "-" }}</dd></div>
                 <div><dt>パック</dt><dd>{{ format_jst(estimate.step_package_at) or "-" }}</dd></div>
                 <div><dt>機能追加</dt><dd>{{ format_jst(estimate.step_custom_at) or "-" }}</dd></div>
@@ -89,7 +100,7 @@
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="10" class="text-center text-secondary py-5">見積り履歴はまだありません。</td></tr>
+          <tr><td colspan="11" class="text-center text-secondary py-5">該当する見積り履歴はありません。</td></tr>
         {% endfor %}
       </tbody>
     </table>

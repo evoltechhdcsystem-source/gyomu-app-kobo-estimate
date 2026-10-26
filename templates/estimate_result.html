@@ -9,12 +9,15 @@
         <h1>概算見積り書</h1>
       </div>
       <div class="print-estimate-total">
-        <span>合計</span>
+        <span>初期費用の合計</span>
         <strong>{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></strong>
+        {% if estimate.has_quote_required_items %}<small>要相談の機能は合計に含まれません。</small>{% endif %}
       </div>
     </div>
 
     <div class="print-estimate-meta">
+      {% if estimate.plan_key == 'full' %}<div data-maintenance-print {% if estimate.maintenance_monthly_price is none %}hidden{% endif %}><span>サーバー保守（月額・税抜）</span><strong data-maintenance-print-price>{{ estimate.maintenance_price_label }}（初期費用には含みません）</strong></div>{% endif %}
+      <div><span>プラン</span><strong>{{ plan.name if plan else 'かんたんアプリプラン' }}</strong></div>
       <div>
         <span>利用端末</span>
         <strong>{{ estimate.device_type }}</strong>
@@ -38,18 +41,10 @@
           </tr>
         </thead>
         <tbody>
-          {% if estimate.package_type == "基本パック" %}
-            <tr><td>記録を入力する画面 / データ登録機能</td></tr>
-            <tr><td>入力した記録を一覧で見る画面</td></tr>
-            <tr><td>記録の詳しい内容を見る画面 / データ編集機能・データ削除機能</td></tr>
-          {% elif estimate.package_type == "運用パック" %}
-            <tr><td>通常利用: 記録を入力する画面 / データ登録機能</td></tr>
-            <tr><td>通常利用: 入力した記録を一覧で見る画面</td></tr>
-            <tr><td>通常利用: 入力した記録の検索画面 / データ検索機能</td></tr>
-            <tr><td>通常利用: 記録の詳しい内容を見る画面 / データ編集機能・データ削除機能</td></tr>
-            <tr><td>管理者向け: 管理用の情報を入力する画面 / データ登録機能</td></tr>
-            <tr><td>管理者向け: 管理用の情報を一覧で見る画面</td></tr>
-            <tr><td>管理者向け: 管理用の情報の詳しい内容を見る画面 / データ編集機能・データ削除機能</td></tr>
+          {% if estimate.package_type in ["基本パック", "運用パック"] and package_screen_definitions.get(estimate.package_type) %}
+            {% for screen in package_screen_definitions[estimate.package_type] %}
+              <tr><td>{{ (screen.section_title ~ '：') if screen.section_title else '' }}{{ screen.screen_name }}{% for feature in screen.features %} / {{ feature.label }}{% endfor %}</td></tr>
+            {% endfor %}
           {% elif estimate.package_type == "カスタムパック" %}
             {% for item in estimate.items %}
               {% if is_screen_count_item(item.item_name, estimate.device_type) %}
@@ -59,7 +54,7 @@
                     <small>選択した端末タイプと画面数に合わせて、入力・一覧・詳細などの画面を作成します。</small>
                   </td>
                   <td>{{ estimate_item_condition(item.item_name, estimate.device_type) }}</td>
-                  <td>{{ "{:,}".format(item.price) }}円</td>
+                  <td>{{ item.price_label }}</td>
                 </tr>
               {% else %}
                 {% set feature_name = estimate_feature_name(item.item_name) %}
@@ -69,7 +64,7 @@
                     <small>{{ feature_descriptions.get(feature_name, "業務に合わせて必要な機能を追加します。") }}</small>
                   </td>
                   <td>{{ estimate_item_condition(item.item_name, estimate.device_type) }}</td>
-                  <td>{{ "{:,}".format(item.price) }}円</td>
+                  <td>{{ item.price_label }}</td>
                 </tr>
               {% endif %}
             {% endfor %}
@@ -80,15 +75,18 @@
           {% endif %}
         </tbody>
       </table>
+      {% if estimate.has_quote_required_items %}<p>要相談の機能は合計に含まれません。詳細お見積りで金額をご案内します。</p>{% endif %}
     </div>
 
     <div class="print-estimate-note">
+      {% if estimate.plan_key == 'simple' %}
       <div class="print-estimate-note-item">
         <strong>開発ツールライセンス</strong>
         <span>業務アプリの作成・公開・運用基盤として、ノーコードツール「Click」を利用します。</span>
         <span>ご利用にはClick Standardプラン以上（月額4,400円～）の契約が別途必要です。</span>
         <small>合計金額には加算していません。</small>
       </div>
+      {% endif %}
       <div class="print-estimate-note-item">
         <strong>外部AIサービス利用料</strong>
         <span>OpenAI API等の外部AIサービスを利用する場合、</span>
@@ -154,7 +152,18 @@
           {% endif %}
         </div>
 
-        <div class="selected-estimate-visuals">
+        <div class="selected-estimate-visuals selected-estimate-visuals-three">
+          <div class="selected-estimate-card">
+            {% if estimate.plan_key == 'full' %}
+              <img src="{{ url_for('static', filename='img/plan-full-generated.png') }}" alt="しっかりアプリプランのイメージ">
+            {% else %}
+              <img src="{{ url_for('static', filename='img/plan-simple-generated.png') }}" alt="かんたんアプリプランのイメージ">
+            {% endif %}
+            <div>
+              <span>選択したプラン</span>
+              <strong>{{ plan.name if plan else ('しっかりアプリプラン' if estimate.plan_key == 'full' else 'かんたんアプリプラン') }}</strong>
+            </div>
+          </div>
           <div class="selected-estimate-card">
             {% if estimate.device_type == "PC" %}
               <img src="{{ url_for('static', filename='img/device-pc-generated.png') }}" alt="PC向け">
@@ -215,7 +224,7 @@
                   </span>
                   <small class="result-item-condition">{{ estimate_item_condition(item.item_name, estimate.device_type) }}</small>
                 {% endif %}
-                <strong>{{ "{:,}".format(item.price) }}円</strong>
+                <strong>{{ item.price_label }}</strong>
               </div>
             {% endfor %}
           {% else %}
@@ -235,24 +244,60 @@
             {% endfor %}
           {% endif %}
         </div>
+        {% if estimate.has_quote_required_items %}
+          <p class="quote-estimate-note">「要相談」の機能は表示金額に含まれません。詳細お見積りで金額をご案内します。</p>
+        {% endif %}
       </div>
     </div>
 
     <div class="col-lg-4">
       <div class="summary-panel result-side">
-        <div class="small text-secondary">合計</div>
+        <div class="cost-section-title">初期費用の合計</div>
         <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></div>
+        {% if estimate.plan_key == 'full' %}
+          <div class="maintenance-option-panel">
+          {% if maintenance_option or estimate.maintenance_monthly_price is not none %}
+          <form method="post" action="{{ url_for('main.update_maintenance', estimate_id=estimate.id) }}" class="maintenance-option-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="cost-section-title">月額費用</div>
+            <label class="maintenance-option-row">
+              <input class="form-check-input" type="checkbox" name="maintenance" value="1" {% if estimate.maintenance_monthly_price is not none %}checked{% endif %} {% if not can_edit_maintenance %}disabled{% endif %}>
+              <strong>サーバー保守</strong>
+              <span class="maintenance-option-price">
+                <span data-maintenance-price>
+                {% if estimate.maintenance_monthly_price is not none %}{{ estimate.maintenance_price_label }}
+                {% elif maintenance_option.is_quote_required %}要相談
+                {% else %}{{ "{:,}".format(maintenance_option.unit_price) }}円／月{% endif %}
+                </span>
+                <small>（税抜）</small>
+              </span>
+            </label>
+            <p class="small text-secondary mb-0">初期費用とは別に、毎月かかる費用です。</p>
+            <div data-maintenance-feedback hidden class="small mt-2">
+              <span data-maintenance-status role="status" aria-live="polite"></span>
+              <button type="button" data-maintenance-retry hidden class="btn btn-outline-dark btn-sm mt-1">再試行</button>
+            </div>
+            {% if can_edit_maintenance %}<noscript><button class="btn btn-outline-dark mt-2" type="submit">保守の選択を更新</button></noscript>{% endif %}
+          </form>
+          {% endif %}
+          <p class="small text-secondary mt-2 mb-0">※Google Cloud利用料は別途かかります。月額料金は利用量・為替により変動します。</p>
+          </div>
+        {% endif %}
+        {% if estimate.has_quote_required_items %}<p class="quote-estimate-note">要相談の機能は合計に含まれません。</p>{% endif %}
         <div class="included-work-note">
           <div class="small text-secondary">本見積りに含まれる作業</div>
           <ul>
             <li>画面・機能確認のお打ち合わせ 2時間まで</li>
             <li>アプリの設計・制作</li>
+            {% if estimate.plan_key == 'simple' %}
             <li>開発環境 Click の契約サポート</li>
+            {% endif %}
             <li>仮納品後の微調整</li>
             <li>納品・操作説明 1時間まで</li>
           </ul>
         </div>
         <div class="license-note">
+          {% if estimate.plan_key == 'simple' %}
           <div class="license-note-item">
             <div class="small text-secondary">開発ツールライセンス</div>
             <strong>ノーコードツール「Click」</strong>
@@ -261,6 +306,7 @@
             <a class="click-official-link" href="https://click.dev/" target="_blank" rel="noopener">詳しくはこちら（Click公式サイト）</a>
             <small>合計金額には加算していません。</small>
           </div>
+          {% endif %}
           <div class="license-note-item">
             <div class="small text-secondary">外部AIサービス利用料</div>
             <strong>OpenAI API等の利用料</strong>
@@ -277,7 +323,7 @@
               {{ back_label }}
             {% endif %}
           </a>
-          <a class="btn btn-outline-dark no-print" href="{{ url_for('main.download_estimate_pdf', estimate_id=estimate.id) }}">PDFで保存</a>
+          <a class="btn btn-outline-dark no-print" data-maintenance-dependent href="{{ url_for('main.download_estimate_pdf', estimate_id=estimate.id) }}">PDFで保存</a>
         </div>
         {% if estimate.package_type != "カスタムパック" %}
           <div class="custom-estimate-cta">
@@ -290,7 +336,7 @@
         {% endif %}
         <div class="result-inquiry-cta">
           <p class="result-inquiry-lead">今使っている帳票を見せてください<br>詳細なお見積りを致します</p>
-          <a class="btn btn-primary result-inquiry-button" href="{{ url_for('main.inquiry', estimate_id=estimate.id) }}">
+          <a class="btn btn-primary result-inquiry-button" data-maintenance-dependent href="{{ url_for('main.inquiry', estimate_id=estimate.id) }}">
             <span>問合せ</span>
             <span>詳細お見積りへ進む</span>
           </a>
@@ -304,4 +350,7 @@
   </div>
 </section>
 {% include "_parts_modal.html" %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/maintenance.js') }}"></script>
 {% endblock %}

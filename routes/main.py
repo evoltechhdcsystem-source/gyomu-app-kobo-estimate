@@ -4,6 +4,7 @@ import hashlib
 from datetime import datetime
 
 from flask import (
+    abort,
     Blueprint,
     current_app,
     flash,
@@ -16,7 +17,7 @@ from flask import (
     url_for,
 )
 
-from models import Estimate, EstimateItem, Inquiry, InquiryAttachment, db
+from models import SIMPLE_PLAN, Estimate, EstimateItem, Inquiry, InquiryAttachment, PlanMaster, db
 from services.box_service import allowed_file, upload_to_box
 from services.estimate_display_service import (
     custom_feature_categories,
@@ -40,14 +41,17 @@ from services.estimate_service import (
     package_feature_quantities,
     package_features,
     package_screens,
+    quote_required_features,
 )
 from services.mail_service import send_inquiry_mails
+from services.maintenance_service import maintenance_option
 from services.lineworks_service import send_lineworks_webhook_notification
 from services.package_display_service import package_choice_cards, package_screen_definitions_by_package
 
 main_bp = Blueprint("main", __name__)
 STEP_FIELDS = {
     "started": "step_started_at",
+    "plan": "step_plan_at",
     "device": "step_device_at",
     "package": "step_package_at",
     "custom": "step_custom_at",
@@ -116,6 +120,7 @@ def _ensure_flow_estimate(flow: dict) -> Estimate:
         flow["estimate_id"] = estimate.id
     if not estimate.visitor_key:
         estimate.visitor_key = _visitor_key()
+    estimate.plan_key = flow.get("plan_key") or "unselected"
     if flow.get("referrer_url") and not estimate.referrer_url:
         estimate.referrer_url = flow["referrer_url"]
     return estimate
@@ -170,6 +175,7 @@ def _estimate_flow_total(flow: dict | None, default_custom_screens: int = 0) -> 
         custom_screens,
         features,
         feature_quantities,
+        plan_key=flow.get("plan_key", SIMPLE_PLAN),
     )
     return result["total_price"]
 
@@ -182,6 +188,7 @@ def _estimate_status(active_step: str, flow: dict | None = None, estimate: Estim
 
     steps = [
         {"key": "top", "label": "スタート"},
+        {"key": "plan", "label": "プラン選択"},
         {"key": "device", "label": "利用端末"},
         {"key": "package", "label": "パック選択"},
     ]
@@ -209,12 +216,13 @@ def _estimate_status(active_step: str, flow: dict | None = None, estimate: Estim
 
     if current_index > 0:
         steps[0]["href"] = url_for("main.index")
-    if current_index > 1:
-        steps[1]["href"] = url_for("main.device_select")
-    if current_index > 2:
-        steps[2]["href"] = url_for("main.package_select")
-    if uses_custom and current_index > 3:
-        steps[3]["href"] = url_for("main.custom_estimate")
+    for key, endpoint in (
+        ("plan", "main.plan_select"), ("device", "main.device_select"),
+        ("package", "main.package_select"), ("custom", "main.custom_estimate"),
+    ):
+        index = next((i for i, step in enumerate(steps) if step["key"] == key), None)
+        if index is not None and current_index > index:
+            steps[index]["href"] = url_for(endpoint)
     result_index = next((index for index, step in enumerate(steps) if step["key"] == "result"), None)
     if result_index is not None and current_index > result_index and estimate:
         steps[result_index]["href"] = url_for("main.estimate_result", estimate_id=estimate.id)
@@ -236,9 +244,11 @@ def _save_estimate_and_redirect(flow: dict):
         custom_screens,
         selected_features,
         feature_quantities,
+        plan_key=flow.get("plan_key", SIMPLE_PLAN),
     )
     flow = _touch_flow_step(flow, "result")
     estimate = _flow_estimate(flow)
+    is_first_estimate = estimate is None or not EstimateItem.query.filter_by(estimate_id=estimate.id).first()
     if estimate is None:
         estimate = Estimate(device_type="未選択", package_type="未選択", total_price=0)
         db.session.add(estimate)
@@ -249,13 +259,22 @@ def _save_estimate_and_redirect(flow: dict):
     estimate.device_type = result["device_type"]
     estimate.package_type = result["package_type"]
     estimate.total_price = result["total_price"]
+    estimate.plan_key = flow["plan_key"]
+    if is_first_estimate:
+        option = maintenance_option(estimate.plan_key)
+        if option is not None:
+            estimate.maintenance_monthly_price = 0 if option.is_quote_required else option.unit_price
+            estimate.maintenance_quote_required = option.is_quote_required
     if not estimate.visitor_key:
         estimate.visitor_key = _visitor_key()
     _apply_tracking_to_estimate(estimate, flow)
 
     for item in result["items"]:
         db.session.add(
-            EstimateItem(estimate_id=estimate.id, item_name=item["name"], price=item["price"])
+            EstimateItem(
+                estimate_id=estimate.id, item_name=item["name"], price=item["price"],
+                is_quote_required=item.get("is_quote_required", False),
+            )
         )
     db.session.commit()
     flow["estimate_id"] = estimate.id
@@ -281,26 +300,46 @@ def index():
     return render_template("index.html", estimate_status=_estimate_status("top"))
 
 
+@main_bp.route("/plan", methods=["GET", "POST"])
+def plan_select():
+    flow = session.get("estimate_flow") or {}
+    plans = PlanMaster.query.filter_by(is_active=True).all()
+    if request.method == "POST":
+        plan_key = request.form.get("plan_key", "")
+        if plan_key not in {plan.key for plan in plans}:
+            flash("プランを選択してください。", "danger")
+            return render_template("plan_select.html", plans=plans, estimate_status=_estimate_status("plan", flow)), 400
+        if flow.get("plan_key") and flow["plan_key"] != plan_key:
+            flow = {"referrer_url": flow.get("referrer_url"), "step_times": {"started": _now().isoformat()}}
+        flow["plan_key"] = plan_key
+        _touch_flow_step(flow, "plan")
+        return redirect(url_for("main.device_select"))
+    _touch_flow_step(flow, "plan")
+    return render_template("plan_select.html", plans=plans, estimate_status=_estimate_status("plan", flow))
+
+
 @main_bp.route("/device", methods=["GET", "POST"])
 def device_select():
     flow = session.get("estimate_flow") or {}
+    if not flow.get("plan_key"):
+        return redirect(url_for("main.plan_select"))
     flow = _touch_flow_step(flow, "device")
 
     if request.method == "GET":
         return render_template(
             "device_select.html",
-            device_prices=device_prices(),
-            estimate_status=_estimate_status("device"),
+            device_prices=device_prices(flow["plan_key"]),
+            estimate_status=_estimate_status("device", flow),
         )
 
     device_type = request.form.get("device_type", "")
-    current_device_prices = device_prices()
+    current_device_prices = device_prices(flow["plan_key"])
     if device_type not in current_device_prices:
         flash("端末を選ぶと次へ進めます。3つの中から1つ選択してください。", "danger")
         return render_template(
             "device_select.html",
             device_prices=current_device_prices,
-            estimate_status=_estimate_status("device"),
+            estimate_status=_estimate_status("device", flow),
         ), 400
 
     flow["device_type"] = device_type
@@ -314,6 +353,8 @@ def device_select():
 @main_bp.route("/package", methods=["GET", "POST"])
 def package_select():
     flow = session.get("estimate_flow")
+    if not flow or not flow.get("plan_key"):
+        return redirect(url_for("main.plan_select"))
     if not flow or not flow.get("device_type"):
         return redirect(url_for("main.device_select"))
     flow = _touch_flow_step(flow, "package")
@@ -321,26 +362,26 @@ def package_select():
     if request.method == "GET":
         return render_template(
             "package_select.html",
-            package_screens=package_screens(),
-            package_feature_total=package_feature_total,
-            package_choice_cards=package_choice_cards(),
-            package_screen_definitions=package_screen_definitions_by_package(),
-            device_prices=device_prices(),
+            package_screens=package_screens(flow["plan_key"]),
+            package_feature_total=lambda package, device: package_feature_total(package, device, flow["plan_key"]),
+            package_choice_cards=package_choice_cards(flow["plan_key"]),
+            package_screen_definitions=package_screen_definitions_by_package(flow["plan_key"]),
+            device_prices=device_prices(flow["plan_key"]),
             flow=flow,
             estimate_status=_estimate_status("package", flow),
         )
 
     package_type = request.form.get("package_type", "")
-    current_package_screens = package_screens()
+    current_package_screens = package_screens(flow["plan_key"])
     if package_type not in current_package_screens:
         flash("パックを選ぶと次へ進めます。現場で使いたい内容に近いパックを1つ選択してください。", "danger")
         return render_template(
             "package_select.html",
             package_screens=current_package_screens,
-            package_feature_total=package_feature_total,
-            package_choice_cards=package_choice_cards(),
-            package_screen_definitions=package_screen_definitions_by_package(),
-            device_prices=device_prices(),
+            package_feature_total=lambda package, device: package_feature_total(package, device, flow["plan_key"]),
+            package_choice_cards=package_choice_cards(flow["plan_key"]),
+            package_screen_definitions=package_screen_definitions_by_package(flow["plan_key"]),
+            device_prices=device_prices(flow["plan_key"]),
             flow=flow,
             estimate_status=_estimate_status("package", flow),
         ), 400
@@ -349,8 +390,8 @@ def package_select():
     if previous_package_type != package_type:
         flow.pop("custom_screens", None)
     flow["package_type"] = package_type
-    flow["features"] = package_features(package_type)
-    flow["feature_quantities"] = package_feature_quantities(package_type)
+    flow["features"] = package_features(package_type, flow["plan_key"])
+    flow["feature_quantities"] = package_feature_quantities(package_type, flow["plan_key"])
     estimate = _ensure_flow_estimate(flow)
     estimate.device_type = flow["device_type"]
     estimate.package_type = package_type
@@ -364,23 +405,28 @@ def package_select():
 @main_bp.route("/custom", methods=["GET", "POST"])
 def custom_estimate():
     flow = session.get("estimate_flow")
+    if not flow or not flow.get("plan_key"):
+        return redirect(url_for("main.plan_select"))
     if not flow or not flow.get("device_type"):
         return redirect(url_for("main.device_select"))
     if flow.get("package_type") != "カスタムパック":
         return redirect(url_for("main.package_select"))
 
     flow = _touch_flow_step(flow, "custom")
+    selected_plan = db.session.get(PlanMaster, flow["plan_key"])
 
     if request.method == "GET":
         return render_template(
             "custom_estimate.html",
-            feature_prices=feature_prices_for_device(flow["device_type"]),
-            feature_categories=custom_feature_categories(flow["device_type"]),
-            feature_descriptions=feature_descriptions(),
-            feature_conditions=feature_conditions(),
-            feature_icon_files=feature_icon_files(),
-            multiple_feature_names=multiple_features(),
-            device_prices=device_prices(),
+            plan=selected_plan,
+            feature_prices=feature_prices_for_device(flow["device_type"], flow["plan_key"]),
+            feature_categories=custom_feature_categories(flow["device_type"], flow["plan_key"]),
+            quote_feature_names=quote_required_features(flow["plan_key"]),
+            feature_descriptions=feature_descriptions(flow["plan_key"]),
+            feature_conditions=feature_conditions(flow["plan_key"]),
+            feature_icon_files=feature_icon_files(flow["plan_key"]),
+            multiple_feature_names=multiple_features(flow["plan_key"]),
+            device_prices=device_prices(flow["plan_key"]),
             flow=flow,
             estimate_status=_estimate_status("custom", flow),
         )
@@ -390,22 +436,26 @@ def custom_estimate():
         flash("画面数を入力してください。1以上の数字で入力すると見積りできます。", "danger")
         return render_template(
             "custom_estimate.html",
-            feature_prices=feature_prices_for_device(flow["device_type"]),
-            feature_categories=custom_feature_categories(flow["device_type"]),
-            feature_descriptions=feature_descriptions(),
-            feature_conditions=feature_conditions(),
-            feature_icon_files=feature_icon_files(),
-            multiple_feature_names=multiple_features(),
-            device_prices=device_prices(),
+            plan=selected_plan,
+            feature_prices=feature_prices_for_device(flow["device_type"], flow["plan_key"]),
+            feature_categories=custom_feature_categories(flow["device_type"], flow["plan_key"]),
+            quote_feature_names=quote_required_features(flow["plan_key"]),
+            feature_descriptions=feature_descriptions(flow["plan_key"]),
+            feature_conditions=feature_conditions(flow["plan_key"]),
+            feature_icon_files=feature_icon_files(flow["plan_key"]),
+            multiple_feature_names=multiple_features(flow["plan_key"]),
+            device_prices=device_prices(flow["plan_key"]),
             flow=flow,
             estimate_status=_estimate_status("custom", flow),
         ), 400
 
     selected_features = [
-        feature for feature in request.form.getlist("features") if feature in feature_prices()
+        feature for feature in request.form.getlist("features")
+        if feature in feature_prices(flow["plan_key"])
+        and not (flow["plan_key"] == "full" and feature == "サーバー保守/月")
     ]
     feature_quantities = {}
-    current_multiple_features = multiple_features()
+    current_multiple_features = multiple_features(flow["plan_key"])
     for feature in selected_features:
         quantity = _as_int(request.form.get(f"feature_quantities[{feature}]"), 1)
         feature_quantities[feature] = max(quantity, 1) if feature in current_multiple_features else 1
@@ -418,13 +468,15 @@ def custom_estimate():
         session["estimate_flow"] = flow
         return render_template(
             "custom_estimate.html",
-            feature_prices=feature_prices_for_device(flow["device_type"]),
-            feature_categories=custom_feature_categories(flow["device_type"]),
-            feature_descriptions=feature_descriptions(),
-            feature_conditions=feature_conditions(),
-            feature_icon_files=feature_icon_files(),
+            plan=selected_plan,
+            feature_prices=feature_prices_for_device(flow["device_type"], flow["plan_key"]),
+            feature_categories=custom_feature_categories(flow["device_type"], flow["plan_key"]),
+            quote_feature_names=quote_required_features(flow["plan_key"]),
+            feature_descriptions=feature_descriptions(flow["plan_key"]),
+            feature_conditions=feature_conditions(flow["plan_key"]),
+            feature_icon_files=feature_icon_files(flow["plan_key"]),
             multiple_feature_names=current_multiple_features,
-            device_prices=device_prices(),
+            device_prices=device_prices(flow["plan_key"]),
             flow=flow,
             estimate_status=_estimate_status("custom", flow),
         ), 400
@@ -466,13 +518,45 @@ def estimate_result(estimate_id: int):
         back_label=back_labels.get(back_endpoint, "前の画面へ戻る"),
         estimate_item_label=estimate_item_label,
         estimate_feature_name=estimate_feature_name,
-        estimate_item_condition=estimate_item_condition,
+        estimate_item_condition=lambda item_name, device_type: estimate_item_condition(item_name, device_type, estimate.plan_key),
         is_screen_count_item=is_screen_count_item,
-        feature_descriptions=feature_descriptions(),
-        feature_conditions=feature_conditions(),
+        feature_descriptions=feature_descriptions(estimate.plan_key),
+        feature_conditions=feature_conditions(estimate.plan_key),
         screen_descriptions=screen_descriptions(),
-        package_screen_definitions=package_screen_definitions_by_package(),
+        package_screen_definitions=package_screen_definitions_by_package(estimate.plan_key),
+        plan=db.session.get(PlanMaster, estimate.plan_key),
+        maintenance_option=maintenance_option(estimate.plan_key),
+        can_edit_maintenance=bool(flow and flow.get("estimate_id") == estimate.id and not estimate.inquiry),
     )
+
+
+@main_bp.post("/estimate/<int:estimate_id>/maintenance")
+def update_maintenance(estimate_id: int):
+    estimate = Estimate.query.get_or_404(estimate_id)
+    flow = session.get("estimate_flow") or {}
+    if estimate.plan_key != "full" or flow.get("estimate_id") != estimate.id:
+        abort(404)
+    if estimate.inquiry:
+        abort(409)
+    if request.form.get("maintenance") == "1":
+        option = maintenance_option(estimate.plan_key)
+        if option is None:
+            abort(400)
+        if estimate.maintenance_monthly_price is None:
+            estimate.maintenance_monthly_price = 0 if option.is_quote_required else option.unit_price
+            estimate.maintenance_quote_required = option.is_quote_required
+    else:
+        estimate.maintenance_monthly_price = None
+        estimate.maintenance_quote_required = False
+    db.session.commit()
+    if request.accept_mimetypes.best == "application/json":
+        option = maintenance_option(estimate.plan_key)
+        selected = estimate.maintenance_monthly_price is not None
+        price_label = estimate.maintenance_price_label if selected else (
+            "要相談" if option and option.is_quote_required else f"{option.unit_price:,}円／月" if option else "選択不可"
+        )
+        return jsonify(selected=selected, price_label=price_label, available=option is not None)
+    return redirect(url_for("main.estimate_result", estimate_id=estimate.id))
 
 
 @main_bp.post("/estimate/<int:estimate_id>/custom")
@@ -480,6 +564,7 @@ def start_custom_from_estimate(estimate_id: int):
     estimate = Estimate.query.get_or_404(estimate_id)
     flow = session.get("estimate_flow") or {}
     session["estimate_flow"] = {
+        "plan_key": estimate.plan_key,
         "device_type": _current_or_estimate_device(estimate),
         "package_type": "カスタムパック",
         "estimate_id": estimate.id,
@@ -516,6 +601,7 @@ def inquiry(estimate_id: int):
         return render_template(
             "inquiry.html",
             estimate=estimate,
+            plan=db.session.get(PlanMaster, estimate.plan_key),
             estimate_status=_estimate_status("inquiry", flow, estimate),
             back_url=url_for("main.estimate_result", estimate_id=estimate.id),
             estimate_item_label=estimate_item_label,
@@ -530,6 +616,7 @@ def inquiry(estimate_id: int):
         return render_template(
             "inquiry.html",
             estimate=estimate,
+            plan=db.session.get(PlanMaster, estimate.plan_key),
             estimate_status=_estimate_status("inquiry", flow, estimate),
             back_url=url_for("main.estimate_result", estimate_id=estimate.id),
             estimate_item_label=estimate_item_label,
@@ -554,6 +641,7 @@ def inquiry(estimate_id: int):
             return render_template(
                 "inquiry.html",
                 estimate=estimate,
+                plan=db.session.get(PlanMaster, estimate.plan_key),
                 estimate_status=_estimate_status("inquiry", flow, estimate),
                 back_url=url_for("main.estimate_result", estimate_id=estimate.id),
                 estimate_item_label=estimate_item_label,
