@@ -39,10 +39,7 @@ class PlanFlowTest(unittest.TestCase):
             self.assertEqual("開発環境 Click の契約サポート" in content, has_click_terms)
             self.assertEqual("開発ツールライセンス" in content, has_click_terms)
             self.assertEqual("Click Standardプラン以上" in content, has_click_terms)
-            self.assertEqual("Google Cloud利用料（月額）" in content, plan_key == FULL_PLAN)
-            if plan_key == FULL_PLAN:
-                self.assertIn("Google Cloudの利用料が月額で別途かかります。", content)
-                self.assertIn("合計金額には加算していません。", content)
+            self.assertNotIn("Google Cloud利用料（月額）", content)
 
     def test_quote_required_custom_feature_is_excluded_and_saved(self):
         with app.app_context():
@@ -96,7 +93,11 @@ class PlanFlowTest(unittest.TestCase):
                 with db.session.no_autoflush:
                     self.assertIn("データ登録 x 2: 要相談", "\n".join(estimate_lines(inquiry)))
             result = self.client.get(response.location)
-            self.assertIn("要相談の機能は合計に含まれません".encode(), result.data)
+            self.assertIn("※要相談の機能は、この金額に含まれていません。".encode(), result.data)
+            self.assertLess(
+                result.data.index(b'class="initial-cost-quote-note"'),
+                result.data.index(b'class="maintenance-option-panel"'),
+            )
             self.assertIn("要相談".encode(), self.client.get(f"/inquiry/{estimate_id}").data)
             self.assertEqual(self.client.get(f"/estimate/{estimate_id}/pdf").status_code, 200)
         finally:

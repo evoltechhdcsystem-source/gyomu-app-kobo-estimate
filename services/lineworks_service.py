@@ -9,7 +9,8 @@ from urllib.request import Request, urlopen
 from flask import current_app, url_for
 
 from models import Inquiry, PlanMaster, db
-from services.notification_context import attachment_names, estimate_item_names, maintenance_lines
+from services.notification_context import attachment_names, estimate_item_names
+from services.maintenance_service import monthly_total_label
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,14 @@ def _notification_text(inquiry: Inquiry) -> str:
     plan = db.session.get(PlanMaster, estimate.plan_key)
     item_names = estimate_item_names(inquiry)
     file_names = attachment_names(inquiry)
+    cost_lines = ["概算費用", f"初期費用: {estimate.total_price:,}円（税抜）"]
+    if estimate.plan_key == "full":
+        cost_lines.append(f"月額費用: {monthly_total_label(estimate).removesuffix('／月')}（税抜）")
+    if estimate.has_quote_required_items or (
+        estimate.plan_key == "full" and estimate.maintenance_monthly_price is not None
+        and estimate.maintenance_quote_required
+    ):
+        cost_lines.append("※要相談の機能があります。")
     lines = [
         "問い合わせ、詳細見積りの依頼が送信されました。",
         "",
@@ -43,9 +52,8 @@ def _notification_text(inquiry: Inquiry) -> str:
         f"電話番号: {inquiry.phone or '-'}",
         f"端末: {estimate.device_type}",
         f"パック: {estimate.package_type}",
-        f"初期費用（概算）: {estimate.total_price:,}円（税抜）",
-        *maintenance_lines(estimate),
-        *(["要相談の機能は上記金額に含まれません。"] if estimate.has_quote_required_items else []),
+        "",
+        *cost_lines,
         "",
         "問い合わせ内容:",
         inquiry.message or "-",

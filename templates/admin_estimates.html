@@ -57,7 +57,24 @@
                 {{ estimate.package_type }}
               {% endif %}
             </td>
-            <td class="text-end">初期：{{ "{:,}".format(estimate.total_price) }}円{% if estimate.has_quote_required_items %}<br><small>＋要相談</small>{% endif %}{% if estimate.maintenance_monthly_price is not none %}<br><small>保守：{{ estimate.maintenance_price_label }}</small>{% endif %}</td>
+            <td class="text-end">
+              初期費用：{{ "{:,}".format(estimate.total_price) }}円（税抜）
+              {% if estimate.has_quote_required_items %}<br><small>＋要相談</small>{% endif %}
+              {% if estimate.plan_key == 'full' %}
+              <details class="estimate-items-detail monthly-items-detail mt-2">
+                <summary>月額費用：{{ monthly_total_label(estimate) | replace('／月', '') }}（税抜）{% if monthly_total_note(estimate) %} ＋要相談{% endif %}</summary>
+                <ul class="text-start">
+                  <li><span>Google Cloud利用料</span><strong>{{ "{:,}".format(cloud_monthly_min) }}円～</strong></li>
+                  {% if estimate.maintenance_monthly_price is not none %}
+                  <li><span>サーバー保守</span><strong>{{ estimate.maintenance_price_label | replace('／月', '') }}</strong></li>
+                  {% endif %}
+                </ul>
+                {% if estimate.maintenance_monthly_price is none %}<p class="small text-secondary text-start mt-2 mb-0">サーバー保守は含まれていません。</p>{% endif %}
+                {% if monthly_total_note(estimate) %}<p class="small text-secondary text-start mt-2 mb-0">{{ monthly_total_note(estimate) }}</p>{% endif %}
+                <p class="small text-secondary text-start mt-2 mb-0">Google Cloud利用料は利用するサービスや利用量、為替により変動します。</p>
+              </details>
+              {% endif %}
+            </td>
             <td>
               {% if estimate.inquiry %}
                 <a href="{{ url_for('admin.inquiry_detail', inquiry_id=estimate.inquiry.id, **{'from': 'estimates'}) }}">#{{ estimate.inquiry.id }}</a>

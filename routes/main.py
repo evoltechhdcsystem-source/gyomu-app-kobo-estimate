@@ -44,7 +44,7 @@ from services.estimate_service import (
     quote_required_features,
 )
 from services.mail_service import send_inquiry_mails
-from services.maintenance_service import maintenance_option
+from services.maintenance_service import GOOGLE_CLOUD_MONTHLY_MIN, maintenance_option, monthly_total_label, monthly_total_note
 from services.lineworks_service import send_lineworks_webhook_notification
 from services.package_display_service import package_choice_cards, package_screen_definitions_by_package
 
@@ -526,6 +526,9 @@ def estimate_result(estimate_id: int):
         package_screen_definitions=package_screen_definitions_by_package(estimate.plan_key),
         plan=db.session.get(PlanMaster, estimate.plan_key),
         maintenance_option=maintenance_option(estimate.plan_key),
+        cloud_monthly_min=GOOGLE_CLOUD_MONTHLY_MIN,
+        monthly_total_label=monthly_total_label(estimate),
+        monthly_total_note=monthly_total_note(estimate),
         can_edit_maintenance=bool(flow and flow.get("estimate_id") == estimate.id and not estimate.inquiry),
     )
 
@@ -555,7 +558,11 @@ def update_maintenance(estimate_id: int):
         price_label = estimate.maintenance_price_label if selected else (
             "要相談" if option and option.is_quote_required else f"{option.unit_price:,}円／月" if option else "選択不可"
         )
-        return jsonify(selected=selected, price_label=price_label, available=option is not None)
+        return jsonify(
+            selected=selected, price_label=price_label, available=option is not None,
+            monthly_total_label=monthly_total_label(estimate),
+            monthly_total_note=monthly_total_note(estimate),
+        )
     return redirect(url_for("main.estimate_result", estimate_id=estimate.id))
 
 
@@ -597,12 +604,18 @@ def download_estimate_pdf(estimate_id: int):
 def inquiry(estimate_id: int):
     estimate = Estimate.query.get_or_404(estimate_id)
     flow = session.get("estimate_flow")
+    monthly_costs = {
+        "cloud_monthly_min": GOOGLE_CLOUD_MONTHLY_MIN,
+        "monthly_total_label": monthly_total_label(estimate),
+        "monthly_total_note": monthly_total_note(estimate),
+    }
     if request.method == "GET":
         return render_template(
             "inquiry.html",
             estimate=estimate,
             plan=db.session.get(PlanMaster, estimate.plan_key),
             estimate_status=_estimate_status("inquiry", flow, estimate),
+            **monthly_costs,
             back_url=url_for("main.estimate_result", estimate_id=estimate.id),
             estimate_item_label=estimate_item_label,
         )
@@ -618,6 +631,7 @@ def inquiry(estimate_id: int):
             estimate=estimate,
             plan=db.session.get(PlanMaster, estimate.plan_key),
             estimate_status=_estimate_status("inquiry", flow, estimate),
+            **monthly_costs,
             back_url=url_for("main.estimate_result", estimate_id=estimate.id),
             estimate_item_label=estimate_item_label,
         ), 400
@@ -643,6 +657,7 @@ def inquiry(estimate_id: int):
                 estimate=estimate,
                 plan=db.session.get(PlanMaster, estimate.plan_key),
                 estimate_status=_estimate_status("inquiry", flow, estimate),
+                **monthly_costs,
                 back_url=url_for("main.estimate_result", estimate_id=estimate.id),
                 estimate_item_label=estimate_item_label,
             ), 400

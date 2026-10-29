@@ -89,13 +89,37 @@
       </div>
 
       <div class="summary-panel inquiry-summary sticky-lg-top">
-        <div class="small text-secondary">送信される見積り・初期費用</div>
-        <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></div>
+        <div class="result-side{% if estimate.plan_key == 'full' %} full-plan-result-side{% endif %}">
+        <div class="cost-section-title">初期費用の合計</div>
+        <div class="estimate-total{% if estimate.has_quote_required_items %} has-quote-note{% endif %}">{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></div>
+        {% if estimate.has_quote_required_items %}<p class="initial-cost-quote-note">※要相談の機能は、この金額に含まれていません。</p>{% endif %}
         {% if estimate.plan_key == 'full' %}
-          <p class="mb-1">サーバー保守：{% if estimate.maintenance_monthly_price is not none %}<strong>{{ estimate.maintenance_price_label }}（税抜）</strong>{% else %}未選択{% endif %}</p>
-          <p class="small text-secondary">保守は初期費用とは別の月額費用です。Google Cloud利用料も別途かかります。</p>
+          <div class="maintenance-option-panel">
+            <div class="monthly-total-row">
+              <strong>月額費用の合計</strong>
+              <div class="monthly-total-amount">
+                <span data-monthly-total>{{ monthly_total_label | replace('／月', '') }}</span>
+                <small class="monthly-total-tax">（税抜）</small>
+              </div>
+              {% if monthly_total_note %}<small>{{ monthly_total_note }}</small>{% endif %}
+            </div>
+            <div class="monthly-breakdown">
+              <div class="monthly-breakdown-title">内訳</div>
+              <div class="maintenance-option-row cloud-monthly-row">
+                <strong>Google Cloud利用料（必須）</strong>
+                <span class="maintenance-option-price">{{ "{:,}".format(cloud_monthly_min) }}円～</span>
+              </div>
+              {% if estimate.maintenance_monthly_price is not none %}
+              <div class="maintenance-option-row">
+                <strong>サーバー保守（任意）</strong>
+                <span class="maintenance-option-price">{{ estimate.maintenance_price_label | replace('／月', '') }}</span>
+              </div>
+              {% else %}<p class="small text-secondary">サーバー保守は含まれていません。</p>{% endif %}
+            </div>
+            <p class="small text-secondary">月額費用は初期費用とは別に、毎月発生します。Google Cloud利用料は利用するサービスや利用量、為替により変動します。</p>
+          </div>
         {% endif %}
-        {% if estimate.has_quote_required_items %}<p class="quote-estimate-note">要相談の機能は上記金額に含まれません。詳細お見積りで金額をご案内します。</p>{% endif %}
+        </div>
         <div class="inquiry-summary-visuals">
           <div class="inquiry-summary-card">
             {% if estimate.plan_key == 'full' %}

@@ -39,7 +39,20 @@ from models import (
     db,
 )
 
+from services.maintenance_service import GOOGLE_CLOUD_MONTHLY_MIN, monthly_total_label, monthly_total_note
+
 admin_bp = Blueprint("admin", __name__)
+
+
+@admin_bp.context_processor
+def monthly_cost_context():
+    return {
+        "cloud_monthly_min": GOOGLE_CLOUD_MONTHLY_MIN,
+        "monthly_total_label": monthly_total_label,
+        "monthly_total_note": monthly_total_note,
+    }
+
+
 JST = timezone(timedelta(hours=9), "JST")
 FEATURE_CATEGORY_OPTIONS = ["基本機能", "外部連携", "導入サポート"]
 FEATURE_ICON_OPTIONS = [

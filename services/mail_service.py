@@ -7,8 +7,10 @@ from email.utils import formataddr
 
 from flask import current_app, url_for
 
-from models import Inquiry
-from services.notification_context import attachment_lines, estimate_lines
+from models import Inquiry, PlanMaster, db
+from services.estimate_display_service import estimate_item_label
+from services.maintenance_service import GOOGLE_CLOUD_MONTHLY_MIN, monthly_total_label, monthly_total_note
+from services.notification_context import attachment_lines
 
 logger = logging.getLogger(__name__)
 
@@ -25,46 +27,97 @@ def _sender() -> str:
 
 def _admin_body(inquiry: Inquiry) -> str:
     detail_url = url_for("admin.inquiry_detail", inquiry_id=inquiry.id, _external=True)
+    estimate = inquiry.estimate
+    plan = db.session.get(PlanMaster, estimate.plan_key)
     lines = [
-        "問い合わせ、詳細見積りの依頼が送信されました。",
+        "お問い合わせ・詳細見積りの依頼を受け付けました。",
         "",
-        f"管理画面: {detail_url}",
+        f"管理画面：{detail_url}",
         "",
-        "お客様情報:",
-        f"会社名: {inquiry.company_name}",
-        f"担当者名: {inquiry.person_name}",
-        f"メール: {inquiry.email}",
-        f"電話番号: {inquiry.phone or '-'}",
+        "【お客様情報】",
+        f"会社名：{inquiry.company_name}",
+        f"担当者名：{inquiry.person_name}",
+        f"メール：{inquiry.email}",
+        f"電話番号：{inquiry.phone or '-'}",
         "",
-        "問い合わせ内容:",
-        inquiry.message or "-",
+        "【お見積り内容】",
+        f"受付番号：#{inquiry.id}",
+        f"見積ID：#{estimate.id}",
+        f"プラン：{plan.name if plan else estimate.plan_key}",
+        f"利用端末：{estimate.device_type}",
+        f"パック：{estimate.package_type}",
         "",
-        *estimate_lines(inquiry),
-        "",
-        *attachment_lines(inquiry),
+        "【費用】",
+        f"初期費用：{estimate.total_price:,}円（税抜・概算）",
     ]
+    if estimate.plan_key == "full":
+        lines.append(f"月額費用：{monthly_total_label(estimate).removesuffix('／月')}（税抜・概算）")
+    if estimate.has_quote_required_items or (
+        estimate.plan_key == "full" and estimate.maintenance_monthly_price is not None
+        and estimate.maintenance_quote_required
+    ):
+        lines.append("※ 要相談の機能があります")
+    lines.extend(["", "【見積項目】"])
+    for item in estimate.items:
+        name = estimate_item_label(item.item_name).replace(" x ", " × ")
+        lines.append(f"・{name}：{item.price_label}")
+    lines.append("")
+    lines.extend(line.replace("添付ファイル: ", "添付ファイル：").replace("添付ファイル:", "添付ファイル：")
+                 for line in attachment_lines(inquiry))
     return "\n".join(lines)
 
 
 def _customer_body(inquiry: Inquiry) -> str:
     company_name = current_app.config.get("COMPANY_NAME", "業務アプリ工房")
+    estimate = inquiry.estimate
+    plan = db.session.get(PlanMaster, estimate.plan_key)
     lines = [
-        f"{inquiry.person_name} 様",
+        f"{inquiry.person_name}様",
         "",
-        "お問い合わせ、詳細見積りのご依頼ありがとうございます。",
-        "以下の内容で受け付けました。",
-        "担当者より折り返しご連絡いたします。",
+        "お問い合わせ・詳細見積りをご依頼いただき、ありがとうございます。",
+        "以下の内容で受け付けました。担当者より折り返しご連絡いたします。",
         "",
-        *estimate_lines(inquiry),
+        f"受付番号：#{inquiry.id}",
+        f"見積ID：#{estimate.id}",
         "",
-        "お問い合わせ内容:",
+        "【お見積り内容】",
+        f"プラン：{plan.name if plan else estimate.plan_key}",
+        f"利用端末：{estimate.device_type}",
+        f"パック：{estimate.package_type}",
+        "",
+        "【費用】",
+        f"初期費用：{estimate.total_price:,}円（税抜・概算）",
+    ]
+    if estimate.has_quote_required_items:
+        lines.append("※要相談の機能は、初期費用に含まれていません。")
+    if estimate.plan_key == "full":
+        lines.extend([
+            "", f"月額費用：{monthly_total_label(estimate).removesuffix('／月')}（税抜・概算）",
+            f"・Google Cloud利用料：月額{GOOGLE_CLOUD_MONTHLY_MIN:,}円（税抜・概算）",
+        ])
+        if estimate.maintenance_monthly_price is not None:
+            if estimate.maintenance_quote_required:
+                lines.append("・サーバー保守：要相談")
+                lines.append(f"※{monthly_total_note(estimate)}")
+            else:
+                lines.append(f"・サーバー保守：月額{estimate.maintenance_monthly_price:,}円（税抜）")
+        else:
+            lines.append("※サーバー保守は含まれていません。")
+        if estimate.maintenance_monthly_price is not None:
+            lines.append("")
+        lines.append("※ Google Cloud利用料は、利用するサービスや利用量、為替により変動します。")
+    lines.extend(["", "【見積項目】"])
+    lines.extend(f"・{estimate_item_label(item.item_name)}：{item.price_label}" for item in estimate.items)
+    lines.extend([
+        "",
+        "【お問い合わせ内容】",
         inquiry.message or "-",
         "",
         "----------------------------------------",
         company_name,
         f"電話番号: {current_app.config.get('COMPANY_PHONE', '')}",
         f"メール: {current_app.config.get('COMPANY_EMAIL', current_app.config.get('MAIL_TO', ''))}",
-    ]
+    ])
     return "\n".join(line for line in lines if line is not None)
 
 

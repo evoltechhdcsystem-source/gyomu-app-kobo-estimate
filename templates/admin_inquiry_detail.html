@@ -37,10 +37,25 @@
     </div>
     <div class="col-lg-5">
       <div class="summary-panel mb-4">
-        <div class="small text-secondary">初期費用</div>
+        <div class="small text-secondary">初期費用（税抜）</div>
         <div class="estimate-total">{{ "{:,}".format(inquiry.estimate.total_price) }}円</div>
-        {% if inquiry.estimate.maintenance_monthly_price is not none %}<p>サーバー保守：{{ inquiry.estimate.maintenance_price_label }}（税抜・初期費用とは別）</p>{% endif %}
-        {% if inquiry.estimate.has_quote_required_items %}<p class="quote-estimate-note">要相談の機能は上記金額に含まれません。</p>{% endif %}
+        {% if inquiry.estimate.has_quote_required_items %}<p class="quote-estimate-note">要相談の機能は、初期費用に含まれていません。</p>{% endif %}
+        {% if inquiry.estimate.plan_key == 'full' %}
+        <div class="border-top pt-3 mt-3">
+          <div class="small text-secondary">月額費用（税抜）</div>
+          <p class="fs-4 fw-bold mb-2">{{ monthly_total_label(inquiry.estimate) | replace('／月', '') }}</p>
+          {% if monthly_total_note(inquiry.estimate) %}<p>{{ monthly_total_note(inquiry.estimate) }}</p>{% endif %}
+          <details>
+            <summary>月額費用について</summary>
+            <ul class="mt-2">
+              <li>Google Cloud利用料：{{ "{:,}".format(cloud_monthly_min) }}円～</li>
+              {% if inquiry.estimate.maintenance_monthly_price is not none %}<li>サーバー保守：{{ inquiry.estimate.maintenance_price_label | replace('／月', '') }}{% if inquiry.estimate.maintenance_quote_required %}（合計には含みません）{% endif %}</li>{% endif %}
+            </ul>
+            {% if inquiry.estimate.maintenance_monthly_price is none %}<p>サーバー保守は含まれていません。</p>{% endif %}
+            <p class="small text-secondary">金額は税抜です。Google Cloud利用料は利用するサービスや利用量、為替により変動します。月額費用は初期費用とは別に、毎月発生します。</p>
+          </details>
+        </div>
+        {% endif %}
         <ul class="list-group list-group-flush mt-3">
           {% for item in inquiry.estimate.items %}
             <li class="list-group-item d-flex justify-content-between px-0">

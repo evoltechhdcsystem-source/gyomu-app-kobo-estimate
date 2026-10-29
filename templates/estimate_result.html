@@ -16,7 +16,7 @@
     </div>
 
     <div class="print-estimate-meta">
-      {% if estimate.plan_key == 'full' %}<div data-maintenance-print {% if estimate.maintenance_monthly_price is none %}hidden{% endif %}><span>サーバー保守（月額・税抜）</span><strong data-maintenance-print-price>{{ estimate.maintenance_price_label }}（初期費用には含みません）</strong></div>{% endif %}
+      {% if estimate.plan_key == 'full' %}<div data-maintenance-print {% if estimate.maintenance_monthly_price is none %}hidden{% endif %}><span>サーバー保守（月額・税抜）</span><strong data-maintenance-print-price>{{ estimate.maintenance_price_label | replace('／月', '') }}（初期費用には含みません）</strong></div>{% endif %}
       <div><span>プラン</span><strong>{{ plan.name if plan else 'かんたんアプリプラン' }}</strong></div>
       <div>
         <span>利用端末</span>
@@ -251,41 +251,55 @@
     </div>
 
     <div class="col-lg-4">
-      <div class="summary-panel result-side">
+      <div class="summary-panel result-side{% if estimate.plan_key == 'full' %} full-plan-result-side{% endif %}">
         <div class="cost-section-title">初期費用の合計</div>
-        <div class="estimate-total">{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></div>
+        <div class="estimate-total{% if estimate.has_quote_required_items %} has-quote-note{% endif %}">{{ "{:,}".format(estimate.total_price) }}円<span class="tax-note">（税抜）</span></div>
+        {% if estimate.has_quote_required_items %}<p class="initial-cost-quote-note">※要相談の機能は、この金額に含まれていません。</p>{% endif %}
         {% if estimate.plan_key == 'full' %}
           <div class="maintenance-option-panel">
+          <div class="monthly-total-row">
+            <strong>月額費用の合計</strong>
+            <div class="monthly-total-amount">
+              <span data-monthly-total role="status" aria-live="polite">{{ monthly_total_label | replace('／月', '') }}</span>
+              <small class="monthly-total-tax">（税抜）</small>
+            </div>
+            <small data-monthly-total-note {% if not monthly_total_note %}hidden{% endif %}>{{ monthly_total_note }}</small>
+          </div>
+          <div class="monthly-breakdown">
+          <div class="monthly-breakdown-title">内訳</div>
+          <div class="maintenance-option-row cloud-monthly-row">
+            <strong>Google Cloud利用料（必須）</strong>
+            <span class="maintenance-option-price">{{ "{:,}".format(cloud_monthly_min) }}円～</span>
+          </div>
           {% if maintenance_option or estimate.maintenance_monthly_price is not none %}
           <form method="post" action="{{ url_for('main.update_maintenance', estimate_id=estimate.id) }}" class="maintenance-option-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="cost-section-title">月額費用</div>
-            <label class="maintenance-option-row">
-              <input class="form-check-input" type="checkbox" name="maintenance" value="1" {% if estimate.maintenance_monthly_price is not none %}checked{% endif %} {% if not can_edit_maintenance %}disabled{% endif %}>
-              <strong>サーバー保守</strong>
+            <div class="maintenance-option-row maintenance-choice-row">
+              <label class="maintenance-choice-label">
+                <input class="form-check-input" type="checkbox" name="maintenance" value="1" {% if estimate.maintenance_monthly_price is not none %}checked{% endif %} {% if not can_edit_maintenance %}disabled{% endif %}>
+                <strong>サーバー保守（任意）</strong>
+              </label>
+              <button class="maintenance-condition-button" type="button" data-maintenance-detail-trigger aria-label="サーバー保守の料金・条件・詳細を見る" aria-haspopup="dialog" aria-controls="maintenanceDetailPopover" aria-expanded="false" title="サーバー保守の詳細を見る">詳細</button>
               <span class="maintenance-option-price">
                 <span data-maintenance-price>
-                {% if estimate.maintenance_monthly_price is not none %}{{ estimate.maintenance_price_label }}
+                {% if estimate.maintenance_monthly_price is not none %}{{ estimate.maintenance_price_label | replace('／月', '') }}
                 {% elif maintenance_option.is_quote_required %}要相談
-                {% else %}{{ "{:,}".format(maintenance_option.unit_price) }}円／月{% endif %}
+                {% else %}{{ "{:,}".format(maintenance_option.unit_price) }}円{% endif %}
                 </span>
-                <small>（税抜）</small>
               </span>
-            </label>
-            <p class="small text-secondary mb-0">初期費用とは別に、毎月かかる費用です。</p>
-            <div data-maintenance-feedback hidden class="small mt-2">
+            </div>
+            <div data-maintenance-feedback hidden class="small mt-2 visually-hidden">
               <span data-maintenance-status role="status" aria-live="polite"></span>
               <button type="button" data-maintenance-retry hidden class="btn btn-outline-dark btn-sm mt-1">再試行</button>
             </div>
             {% if can_edit_maintenance %}<noscript><button class="btn btn-outline-dark mt-2" type="submit">保守の選択を更新</button></noscript>{% endif %}
           </form>
           {% endif %}
-          <p class="small text-secondary mt-2 mb-0">※Google Cloud利用料は別途かかります。月額料金は利用量・為替により変動します。</p>
+          </div>
           </div>
         {% endif %}
-        {% if estimate.has_quote_required_items %}<p class="quote-estimate-note">要相談の機能は合計に含まれません。</p>{% endif %}
         <div class="included-work-note">
-          <div class="small text-secondary">本見積りに含まれる作業</div>
+          <div class="small text-secondary">{% if estimate.plan_key == 'full' %}お見積りに含まれる作業{% else %}本見積りに含まれる作業{% endif %}</div>
           <ul>
             <li>画面・機能確認のお打ち合わせ 2時間まで</li>
             <li>アプリの設計・制作</li>
@@ -296,8 +310,16 @@
             <li>納品・操作説明 1時間まで</li>
           </ul>
         </div>
+        {% if estimate.plan_key == 'full' %}
+        <div class="extra-costs-note">
+          <h2>別途かかる費用</h2>
+          <ul>
+            <li>Google Cloud利用料は利用するサービスや利用量、為替により変動します。</li>
+            <li>外部AIサービスを利用する場合、利用料が別途必要です。</li>
+          </ul>
+        </div>
+        {% else %}
         <div class="license-note">
-          {% if estimate.plan_key == 'simple' %}
           <div class="license-note-item">
             <div class="small text-secondary">開発ツールライセンス</div>
             <strong>ノーコードツール「Click」</strong>
@@ -306,7 +328,6 @@
             <a class="click-official-link" href="https://click.dev/" target="_blank" rel="noopener">詳しくはこちら（Click公式サイト）</a>
             <small>合計金額には加算していません。</small>
           </div>
-          {% endif %}
           <div class="license-note-item">
             <div class="small text-secondary">外部AIサービス利用料</div>
             <strong>OpenAI API等の利用料</strong>
@@ -315,6 +336,7 @@
             <small>合計金額には加算していません。</small>
           </div>
         </div>
+        {% endif %}
         <div class="result-actions">
           <a class="btn btn-outline-dark" href="{{ back_url }}">
             {% if back_label == "機能選択へ戻る" %}
@@ -349,6 +371,29 @@
     </div>
   </div>
 </section>
+{% if estimate.plan_key == 'full' and (maintenance_option or estimate.maintenance_monthly_price is not none) %}
+<div class="feature-detail-popover" id="maintenanceDetailPopover" role="dialog" aria-labelledby="maintenanceDetailPopoverLabel" hidden>
+  <h2 id="maintenanceDetailPopoverLabel">サーバー保守</h2>
+  <dl class="feature-detail-list">
+    <div>
+      <dt>月額料金</dt>
+      <dd data-maintenance-detail-price>
+        {% if estimate.maintenance_monthly_price is not none %}{{ estimate.maintenance_price_label | replace('／月', '') }}
+        {% elif maintenance_option.is_quote_required %}要相談
+        {% else %}{{ "{:,}".format(maintenance_option.unit_price) }}円{% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt>条件</dt>
+      <dd>{{ feature_conditions.get('サーバー保守/月', '条件はお問い合わせください。') }}</dd>
+    </div>
+    <div>
+      <dt>詳細</dt>
+      <dd>{{ feature_descriptions.get('サーバー保守/月', 'アプリの稼働状況を確認し、継続利用に必要なサーバー管理を行います。') }}</dd>
+    </div>
+  </dl>
+</div>
+{% endif %}
 {% include "_parts_modal.html" %}
 {% endblock %}
 {% block scripts %}
