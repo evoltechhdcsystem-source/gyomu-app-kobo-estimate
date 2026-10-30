@@ -4,7 +4,7 @@
 <section class="container py-4 py-lg-5">
   <div class="wizard-head">
     <div>
-      <p class="eyebrow">Step 2</p>
+      <p class="eyebrow">Step 3</p>
       <h1>パックを選択</h1>
       <p>現場で使いたい内容に近いパックを選んでください。</p>
     </div>
@@ -37,7 +37,11 @@
             {% endfor %}
           </ul>
         </div>
-        <p class="package-example">{{ card.example }}</p>
+        {% set example = card.example or '' %}
+        {% if example.startswith('例:') or example.startswith('例：') %}
+          {% set example = example[2:] | trim %}
+        {% endif %}
+        <p class="package-example"><strong>例：</strong> {{ example }}</p>
       </label>
       {% endfor %}
     </div>

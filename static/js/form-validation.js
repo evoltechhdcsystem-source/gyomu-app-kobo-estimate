@@ -66,7 +66,7 @@ function messageForField(field) {
   if (field.name === "custom_screens") {
     return {
       title: "画面数を入力してください",
-      detail: "作りたい画面数を1以上で入力してください。"
+      detail: "作りたい画面数を1～50の整数で入力してください。"
     };
   }
   return {

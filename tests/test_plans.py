@@ -155,6 +155,25 @@ class PlanFlowTest(unittest.TestCase):
         with app.app_context():
             self.assertEqual(db.session.get(PackageMaster, package_id).public_name, "カスタムパック")
 
+    def test_custom_screen_count_accepts_only_one_to_fifty(self):
+        self.client.post("/plan", data={"plan_key": SIMPLE_PLAN})
+        self.client.post("/device", data={"device_type": "PC"})
+        self.client.post("/package", data={"package_type": "カスタムパック"})
+        for value in ("", "0", "-1", "51", "999", "1.5", "abc"):
+            with self.subTest(value=value):
+                response = self.client.post("/custom", data={"custom_screens": value, "features": "データ登録"})
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("画面数は1～50の整数で入力してください。".encode(), response.data)
+        for value in ("1", "50"):
+            with self.subTest(value=value):
+                response = self.client.post("/custom", data={"custom_screens": value, "features": "データ登録"})
+                self.assertEqual(response.status_code, 302)
+                estimate_id = int(response.location.rsplit("/", 1)[1])
+                with app.app_context():
+                    estimate = db.session.get(Estimate, estimate_id)
+                    expected = calculate_estimate("PC", "カスタムパック", int(value), ["データ登録"], plan_key=SIMPLE_PLAN)
+                    self.assertEqual(estimate.total_price, expected["total_price"])
+
     def test_feature_card_uses_its_own_master_price(self):
         with app.app_context():
             device = DevicePriceMaster.query.filter_by(plan_key=FULL_PLAN, name="full::PC").one()

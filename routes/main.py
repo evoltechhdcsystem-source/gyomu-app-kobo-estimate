@@ -431,9 +431,9 @@ def custom_estimate():
             estimate_status=_estimate_status("custom", flow),
         )
 
-    custom_screens = int(request.form.get("custom_screens") or 0)
-    if custom_screens < 1:
-        flash("画面数を入力してください。1以上の数字で入力すると見積りできます。", "danger")
+    custom_screens = _as_int(request.form.get("custom_screens"), 0)
+    if not 1 <= custom_screens <= 50:
+        flash("画面数は1～50の整数で入力してください。", "danger")
         return render_template(
             "custom_estimate.html",
             plan=selected_plan,

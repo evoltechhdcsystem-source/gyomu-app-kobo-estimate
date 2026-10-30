@@ -33,11 +33,7 @@ def estimate_pdf_download_name() -> str:
 
 def build_estimate_pdf(estimate: Estimate) -> BytesIO:
     _register_pdf_fonts()
-    compact_pack = (
-        estimate.plan_key == FULL_PLAN
-        and estimate.package_type in {"基本パック", "運用パック"}
-    )
-    table_padding = 3 if compact_pack else 4
+    table_padding = 3 if estimate.plan_key == FULL_PLAN else 4
     plan = db.session.get(PlanMaster, estimate.plan_key)
     issued_on = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y年%m月%d日")
     subtotal = estimate.total_price
@@ -291,10 +287,7 @@ def build_estimate_pdf(estimate: Estimate) -> BytesIO:
                 ("BACKGROUND", (0, total_row_start), (-1, total_row_start + 1), colors.HexColor("#fff8f2")),
                 ("BACKGROUND", (0, total_row_start + 2), (-1, total_row_start + 2), colors.HexColor("#f3ffd9")),
                 ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#e5ddd4")),
-                ("LINEBEFORE", (1, 0), (1, -1), 0.4, colors.HexColor("#e5ddd4")),
-                ("LINEBELOW", (0, 0), (-1, 0), 0.4, colors.HexColor("#e5ddd4")),
-                ("LINEABOVE", (0, total_row_start), (-1, total_row_start), 0.4, colors.HexColor("#e5ddd4")),
-                ("LINEBELOW", (0, total_row_start), (-1, total_row_start + 1), 0.4, colors.HexColor("#e5ddd4")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#e5ddd4")),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 8),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 8),

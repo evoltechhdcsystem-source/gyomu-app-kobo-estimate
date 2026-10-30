@@ -77,6 +77,9 @@ function bindCustomEstimate() {
   function update() {
     uncheckZeroQuantityFeatures();
 
+    if (screensInput && screensInput.valueAsNumber > Number(screensInput.max)) {
+      screensInput.value = screensInput.max;
+    }
     const screens = Math.max(Number(screensInput?.value || 0), 0);
     const screenTotal = unitPrice * screens;
     const featureTotal = Array.from(form.querySelectorAll('input[name="features"]:checked'))
