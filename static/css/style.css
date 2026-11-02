@@ -969,11 +969,16 @@ main > section {
   line-height: 1.28;
 }
 
+.device-choice-grid > .choice-card {
+  align-content: start;
+}
+
 .device-choice-layout {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
-  align-items: center;
+  align-items: start;
+  align-content: start;
 }
 
 .device-choice-media {
@@ -1009,6 +1014,20 @@ main > section {
 .device-choice-copy .choice-price {
   font-size: 1.08rem;
   line-height: 1.2;
+}
+
+@media (min-width: 901px) {
+  .device-choice-grid > .choice-card {
+    grid-row: span 6;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: subgrid;
+    align-items: start;
+  }
+
+  .device-choice-grid .device-choice-layout,
+  .device-choice-grid .device-choice-copy {
+    display: contents;
+  }
 }
 
 .device-choice-visual {
