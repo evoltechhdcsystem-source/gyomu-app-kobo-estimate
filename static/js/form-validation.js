@@ -66,7 +66,7 @@ function messageForField(field) {
   if (field.name === "custom_screens") {
     return {
       title: "画面数を入力してください",
-      detail: "作りたい画面数を1以上で入力してください。"
+      detail: "作りたい画面数を1～50の整数で入力してください。"
     };
   }
   return {
@@ -91,7 +91,7 @@ function bindWizardValidation() {
 
     form.addEventListener("change", (event) => {
       clearInlineError(form);
-      if (event.target.matches('input[type="radio"][name="device_type"], input[type="radio"][name="package_type"]')) {
+      if (event.target.matches('input[type="radio"][name="plan_key"], input[type="radio"][name="device_type"], input[type="radio"][name="package_type"]')) {
         focusNextButton(form);
       }
     });

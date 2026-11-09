@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from flask import has_app_context
+from services.maintenance_service import MAINTENANCE_NAME
 
-from models import DevicePriceMaster, FeatureMaster, PackageFeatureMaster, PackageMaster
+from models import (
+    SIMPLE_PLAN, DevicePriceMaster, FeatureDevicePriceMaster, FeatureMaster,
+    PackageFeatureMaster, PackageMaster, stored_master_name,
+)
 
 DEVICE_PRICES = {
     "スマートフォン": 10000,
@@ -78,102 +82,115 @@ PACKAGE_FEATURE_QUANTITIES = {
 }
 
 
-def device_prices() -> dict[str, int]:
+def device_prices(plan_key: str = SIMPLE_PLAN) -> dict[str, int]:
     if not has_app_context():
         return dict(DEVICE_PRICES)
     rows = (
         DevicePriceMaster.query
-        .filter_by(is_active=True)
+        .filter_by(is_active=True, plan_key=plan_key)
         .order_by(DevicePriceMaster.sort_order, DevicePriceMaster.id)
         .all()
     )
-    if not rows:
-        return dict(DEVICE_PRICES)
-    return {row.name: row.screen_unit_price for row in rows}
+    return {row.public_name: row.screen_unit_price for row in rows}
 
 
-def package_screens() -> dict[str, int]:
+def package_screens(plan_key: str = SIMPLE_PLAN) -> dict[str, int]:
     if not has_app_context():
         return dict(PACKAGE_SCREENS)
     rows = (
         PackageMaster.query
-        .filter_by(is_active=True)
+        .filter_by(is_active=True, plan_key=plan_key)
         .order_by(PackageMaster.sort_order, PackageMaster.id)
         .all()
     )
-    if not rows:
-        return dict(PACKAGE_SCREENS)
-    return {row.name: row.screen_count for row in rows}
+    return {row.public_name: row.screen_count for row in rows}
 
 
-def feature_prices() -> dict[str, int]:
+def feature_prices(plan_key: str = SIMPLE_PLAN) -> dict[str, int]:
     if not has_app_context():
         return dict(FEATURE_PRICES)
     rows = (
         FeatureMaster.query
-        .filter_by(is_active=True)
+        .filter_by(is_active=True, plan_key=plan_key)
         .order_by(FeatureMaster.sort_order, FeatureMaster.id)
         .all()
     )
-    if not rows:
-        return dict(FEATURE_PRICES)
-    return {row.name: row.unit_price for row in rows}
+    return {row.public_name: row.unit_price for row in rows}
 
 
-def multiple_features() -> set[str]:
+def quote_required_features(plan_key: str = SIMPLE_PLAN) -> set[str]:
+    if not has_app_context():
+        return set()
+    rows = FeatureMaster.query.filter_by(
+        is_active=True, is_quote_required=True, plan_key=plan_key,
+    ).all()
+    return {row.public_name for row in rows}
+
+
+def multiple_features(plan_key: str = SIMPLE_PLAN) -> set[str]:
     if not has_app_context():
         return set(MULTIPLE_FEATURES)
     rows = (
         FeatureMaster.query
-        .filter_by(is_active=True, allow_quantity=True)
+        .filter_by(is_active=True, allow_quantity=True, plan_key=plan_key)
         .order_by(FeatureMaster.sort_order, FeatureMaster.id)
         .all()
     )
-    if not rows:
-        return set(MULTIPLE_FEATURES)
-    return {row.name for row in rows}
+    return {row.public_name for row in rows}
 
 
-def package_feature_quantities(package_type: str) -> dict[str, int]:
+def package_feature_quantities(package_type: str, plan_key: str = SIMPLE_PLAN) -> dict[str, int]:
     if not has_app_context():
         return dict(PACKAGE_FEATURE_QUANTITIES.get(package_type, {}))
     rows = (
         PackageFeatureMaster.query
         .join(PackageMaster)
         .join(FeatureMaster)
-        .filter(PackageMaster.name == package_type)
+        .filter(PackageMaster.plan_key == plan_key)
+        .filter(FeatureMaster.plan_key == plan_key)
         .filter(PackageMaster.is_active.is_(True))
         .filter(FeatureMaster.is_active.is_(True))
         .order_by(PackageFeatureMaster.sort_order, PackageFeatureMaster.id)
         .all()
     )
-    if not rows:
-        return dict(PACKAGE_FEATURE_QUANTITIES.get(package_type, {}))
-    return {row.feature.name: row.quantity for row in rows}
+    return {row.feature.public_name: row.quantity for row in rows if row.package.public_name == package_type}
 
 
-def package_features(package_type: str) -> list[str]:
-    return list(package_feature_quantities(package_type))
+def package_features(package_type: str, plan_key: str = SIMPLE_PLAN) -> list[str]:
+    return list(package_feature_quantities(package_type, plan_key))
 
 
-def package_feature_total(package_type: str, device_type: str) -> int:
+def package_feature_total(package_type: str, device_type: str, plan_key: str = SIMPLE_PLAN) -> int:
+    current_feature_prices = feature_prices(plan_key)
     return sum(
-        feature_unit_price(feature, device_type) * quantity
-        for feature, quantity in package_feature_quantities(package_type).items()
+        current_feature_prices.get(feature, 0) * quantity
+        for feature, quantity in package_feature_quantities(package_type, plan_key).items()
+        if not (plan_key == "full" and feature == MAINTENANCE_NAME)
     )
 
 
-def feature_unit_price(feature: str, device_type: str) -> int:
-    current_device_prices = device_prices()
-    current_feature_prices = feature_prices()
-    if feature == "画面表示項目追加":
-        return current_device_prices.get(device_type, current_feature_prices.get(feature, 0))
-    return current_feature_prices.get(feature, 0)
+def feature_unit_price(feature: str, device_type: str, plan_key: str = SIMPLE_PLAN) -> int:
+    return feature_prices_for_device(device_type, plan_key).get(feature, 0)
 
 
-def feature_prices_for_device(device_type: str) -> dict[str, int]:
-    prices = feature_prices()
-    prices["画面表示項目追加"] = feature_unit_price("画面表示項目追加", device_type)
+def feature_prices_for_device(device_type: str, plan_key: str = SIMPLE_PLAN) -> dict[str, int]:
+    prices = feature_prices(plan_key)
+    if not has_app_context():
+        return prices
+    device = DevicePriceMaster.query.filter_by(
+        plan_key=plan_key, name=stored_master_name(plan_key, device_type), is_active=True,
+    ).first()
+    if device is None:
+        return prices
+    overrides = (
+        FeatureDevicePriceMaster.query
+        .join(FeatureMaster)
+        .filter(FeatureDevicePriceMaster.device_id == device.id)
+        .filter(FeatureMaster.plan_key == plan_key, FeatureMaster.is_active.is_(True))
+        .all()
+    )
+    for override in overrides:
+        prices[override.feature.public_name] = override.unit_price
     return prices
 
 
@@ -183,17 +200,22 @@ def calculate_estimate(
     custom_screens: int = 0,
     selected_features: list[str] | None = None,
     feature_quantities: dict[str, int] | None = None,
+    plan_key: str = SIMPLE_PLAN,
 ) -> dict:
     if package_type == "カスタムパック":
         selected_features = selected_features or []
         feature_quantities = feature_quantities or {}
     else:
-        feature_quantities = package_feature_quantities(package_type)
+        feature_quantities = package_feature_quantities(package_type, plan_key)
         selected_features = list(feature_quantities)
-    current_device_prices = device_prices()
-    current_package_screens = package_screens()
-    current_feature_prices = feature_prices()
-    current_multiple_features = multiple_features()
+    current_device_prices = device_prices(plan_key)
+    current_package_screens = package_screens(plan_key)
+    current_feature_prices = (
+        feature_prices_for_device(device_type, plan_key)
+        if package_type == "カスタムパック" else feature_prices(plan_key)
+    )
+    current_multiple_features = multiple_features(plan_key)
+    quote_names = quote_required_features(plan_key) if package_type == "カスタムパック" else set()
     screen_unit_price = current_device_prices.get(device_type, 0)
     screen_count = (
         custom_screens if package_type == "カスタムパック" else current_package_screens.get(package_type, 0)
@@ -207,14 +229,19 @@ def calculate_estimate(
         }
     ]
     for feature in selected_features:
+        if plan_key == "full" and feature == MAINTENANCE_NAME:
+            continue
         quantity = max(int(feature_quantities.get(feature, 1) or 1), 1)
-        if feature not in current_multiple_features:
+        if package_type == "カスタムパック" and feature not in current_multiple_features:
             quantity = 1
         if feature not in current_feature_prices:
             continue
-        unit_price = feature_unit_price(feature, device_type)
+        unit_price = current_feature_prices[feature]
         name = f"{feature} x {quantity}" if quantity > 1 else feature
-        items.append({"name": name, "price": unit_price * quantity})
+        if feature in quote_names:
+            items.append({"name": name, "price": 0, "is_quote_required": True})
+        else:
+            items.append({"name": name, "price": unit_price * quantity})
 
     return {
         "device_type": device_type,

@@ -8,8 +8,9 @@ from urllib.request import Request, urlopen
 
 from flask import current_app, url_for
 
-from models import Inquiry
+from models import Inquiry, PlanMaster, db
 from services.notification_context import attachment_names, estimate_item_names
+from services.maintenance_service import monthly_total_label
 
 logger = logging.getLogger(__name__)
 
@@ -28,20 +29,31 @@ def _admin_detail_url(inquiry: Inquiry) -> str:
 
 def _notification_text(inquiry: Inquiry) -> str:
     estimate = inquiry.estimate
+    plan = db.session.get(PlanMaster, estimate.plan_key)
     item_names = estimate_item_names(inquiry)
     file_names = attachment_names(inquiry)
+    cost_lines = ["概算費用", f"初期費用: {estimate.total_price:,}円（税抜）"]
+    if estimate.plan_key == "full":
+        cost_lines.append(f"月額費用: {monthly_total_label(estimate).removesuffix('／月')}（税抜）")
+    if estimate.has_quote_required_items or (
+        estimate.plan_key == "full" and estimate.maintenance_monthly_price is not None
+        and estimate.maintenance_quote_required
+    ):
+        cost_lines.append("※要相談の機能があります。")
     lines = [
         "問い合わせ、詳細見積りの依頼が送信されました。",
         "",
         f"受付番号: #{inquiry.id}",
         f"見積ID: #{estimate.id}",
+        f"プラン: {plan.name if plan else estimate.plan_key}",
         f"会社名: {inquiry.company_name}",
         f"担当者名: {inquiry.person_name}",
         f"メール: {inquiry.email}",
         f"電話番号: {inquiry.phone or '-'}",
         f"端末: {estimate.device_type}",
         f"パック: {estimate.package_type}",
-        f"概算見積金額: {estimate.total_price:,}円（税抜）",
+        "",
+        *cost_lines,
         "",
         "問い合わせ内容:",
         inquiry.message or "-",

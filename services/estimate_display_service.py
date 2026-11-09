@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import has_app_context
 
-from models import FeatureMaster
+from models import SIMPLE_PLAN, FeatureMaster
 from services.estimate_service import (
     FEATURE_CONDITIONS,
     SCREEN_PARTS_CONDITION,
@@ -44,6 +44,22 @@ FEATURE_ICON_FILES = {
     "ユーザー操作マニュアル": "feature-manual.svg",
     "ユーザーログイン": "feature-login.svg",
     "アプリ作成相談": "feature-manual.svg",
+    "ユーザー権限追加": "feature-permissions.svg",
+    "社内ネットワーク限定アクセス": "feature-network.svg",
+    "操作履歴、ログ": "feature-logs.svg",
+    "写真撮影": "feature-camera.svg",
+    "ファイル添付（PDFや画像ファイルなど）": "feature-attachment.svg",
+    "ファイル添付": "feature-attachment.svg",
+    "バーコード、2次元コード読み取り": "feature-code-scan.svg",
+    "バーコード、2次元コード読取": "feature-code-scan.svg",
+    "CSV出力": "feature-csv-export.svg",
+    "出力データ加工": "feature-data-transform.svg",
+    "ダッシュボード（集計・グラフ　5つまで）": "feature-dashboard.svg",
+    "ダッシュボード": "feature-dashboard.svg",
+    "PDF出力": "feature-pdf-export.svg",
+    "map表示": "feature-map.svg",
+    "マップ表示": "feature-map.svg",
+    "サーバー保守/月": "feature-server-maintenance.svg",
 }
 SCREEN_DESCRIPTIONS = {
     "データ登録画面": "新しい情報を入力して保存するための画面です。",
@@ -104,15 +120,17 @@ def is_screen_count_item(item_name: str, device_type: str) -> bool:
     return item_name.startswith(device_type) and "画面" in item_name
 
 
-def estimate_item_condition(item_name: str, device_type: str) -> str:
+def estimate_item_condition(item_name: str, device_type: str, plan_key: str = SIMPLE_PLAN) -> str:
     if is_screen_count_item(item_name, device_type):
         return SCREEN_PARTS_CONDITION
-    return feature_conditions().get(estimate_feature_name(item_name), "")
+    return feature_conditions(plan_key).get(estimate_feature_name(item_name), "")
 
 
-def custom_feature_categories(device_type: str) -> list[dict[str, object]]:
-    feature_prices = feature_prices_for_device(device_type)
-    category_rules = _category_rules()
+def custom_feature_categories(device_type: str, plan_key: str = SIMPLE_PLAN) -> list[dict[str, object]]:
+    feature_prices = feature_prices_for_device(device_type, plan_key)
+    if plan_key == "full":
+        feature_prices.pop("サーバー保守/月", None)
+    category_rules = _category_rules(plan_key)
     categories: list[dict[str, object]] = []
     categorized_features = {
         feature_name
@@ -130,35 +148,40 @@ def custom_feature_categories(device_type: str) -> list[dict[str, object]]:
     return categories
 
 
-def feature_descriptions() -> dict[str, str]:
+def feature_descriptions(plan_key: str = SIMPLE_PLAN) -> dict[str, str]:
     if not has_app_context():
         return dict(FEATURE_DESCRIPTIONS)
-    rows = FeatureMaster.query.filter_by(is_active=True).all()
-    values = {row.name: row.description for row in rows if row.description}
-    return values or dict(FEATURE_DESCRIPTIONS)
+    rows = FeatureMaster.query.filter_by(is_active=True, plan_key=plan_key).all()
+    return {row.public_name: row.description for row in rows if row.description}
 
 
-def feature_conditions() -> dict[str, str]:
+def feature_conditions(plan_key: str = SIMPLE_PLAN) -> dict[str, str]:
     if not has_app_context():
         return dict(FEATURE_CONDITIONS)
-    rows = FeatureMaster.query.filter_by(is_active=True).all()
-    values = {row.name: row.condition for row in rows if row.condition}
-    return values or dict(FEATURE_CONDITIONS)
+    rows = FeatureMaster.query.filter_by(is_active=True, plan_key=plan_key).all()
+    return {row.public_name: row.condition for row in rows if row.condition}
 
 
-def feature_icon_files() -> dict[str, str]:
+def feature_icon_files(plan_key: str = SIMPLE_PLAN) -> dict[str, str]:
     if not has_app_context():
         return dict(FEATURE_ICON_FILES)
-    rows = FeatureMaster.query.filter_by(is_active=True).all()
-    values = {row.name: row.icon_file for row in rows if row.icon_file}
-    return values or dict(FEATURE_ICON_FILES)
+    rows = FeatureMaster.query.filter_by(is_active=True, plan_key=plan_key).all()
+    return {
+        row.public_name: (
+            FEATURE_ICON_FILES.get(row.public_name, row.icon_file)
+            if row.icon_file in (None, "feature-add.svg")
+            else row.icon_file
+        )
+        for row in rows
+        if row.icon_file or row.public_name in FEATURE_ICON_FILES
+    }
 
 
 def screen_descriptions() -> dict[str, str]:
     return dict(SCREEN_DESCRIPTIONS)
 
 
-def _category_rules() -> list[tuple[str, set[str] | None]]:
+def _category_rules(plan_key: str = SIMPLE_PLAN) -> list[tuple[str, set[str] | None]]:
     if not has_app_context():
         return [
             ("基本機能", None),
@@ -168,7 +191,7 @@ def _category_rules() -> list[tuple[str, set[str] | None]]:
 
     rows = (
         FeatureMaster.query
-        .filter_by(is_active=True)
+        .filter_by(is_active=True, plan_key=plan_key)
         .order_by(FeatureMaster.sort_order, FeatureMaster.id)
         .all()
     )
@@ -177,11 +200,7 @@ def _category_rules() -> list[tuple[str, set[str] | None]]:
         category_name = row.category_name or "基本機能"
         existing = next((item for item in categories if item[0] == category_name), None)
         if existing is None:
-            categories.append((category_name, {row.name}))
+            categories.append((category_name, {row.public_name}))
         elif existing[1] is not None:
-            existing[1].add(row.name)
-    return categories or [
-        ("基本機能", None),
-        ("外部連携", EXTERNAL_INTEGRATION_FEATURES),
-        ("導入サポート", IMPLEMENTATION_SUPPORT_FEATURES),
-    ]
+            existing[1].add(row.public_name)
+    return categories

@@ -77,6 +77,9 @@ function bindCustomEstimate() {
   function update() {
     uncheckZeroQuantityFeatures();
 
+    if (screensInput && screensInput.valueAsNumber > Number(screensInput.max)) {
+      screensInput.value = screensInput.max;
+    }
     const screens = Math.max(Number(screensInput?.value || 0), 0);
     const screenTotal = unitPrice * screens;
     const featureTotal = Array.from(form.querySelectorAll('input[name="features"]:checked'))
@@ -98,6 +101,10 @@ function bindCustomEstimate() {
     setScreenTotal(screenTotal);
     setFeatureTotal(featureTotal);
     setCurrentTotal(screenTotal + featureTotal);
+    const quoteNote = form.querySelector("[data-quote-price-note]");
+    if (quoteNote) {
+      quoteNote.hidden = !form.querySelector('input[name="features"][data-quote-required="true"]:checked');
+    }
   }
 
   form.addEventListener("change", update);

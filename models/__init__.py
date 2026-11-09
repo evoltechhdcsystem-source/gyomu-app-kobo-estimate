@@ -6,6 +6,26 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+SIMPLE_PLAN = "simple"
+FULL_PLAN = "full"
+
+
+class PlanMaster(db.Model):
+    __tablename__ = "plan_masters"
+
+    key = db.Column(db.String(20), primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_seeded = db.Column(db.Boolean, default=False, nullable=False)
+
+
+def public_master_name(name: str) -> str:
+    return name.split("::", 1)[1] if name.startswith(f"{FULL_PLAN}::") else name
+
+
+def stored_master_name(plan_key: str, name: str) -> str:
+    return f"{FULL_PLAN}::{name}" if plan_key == FULL_PLAN else name
+
 
 class Estimate(db.Model):
     __tablename__ = "estimates"
@@ -14,6 +34,10 @@ class Estimate(db.Model):
     device_type = db.Column(db.String(50), nullable=False)
     package_type = db.Column(db.String(50), nullable=False)
     total_price = db.Column(db.Integer, nullable=False)
+    maintenance_monthly_price = db.Column(db.Integer)
+    maintenance_quote_required = db.Column(db.Boolean, default=False, nullable=False)
+    plan_key = db.Column(db.String(20), default=SIMPLE_PLAN, nullable=False)
+    step_plan_at = db.Column(db.DateTime)
     visitor_key = db.Column(db.String(40))
     referrer_url = db.Column(db.Text)
     step_started_at = db.Column(db.DateTime)
@@ -28,6 +52,14 @@ class Estimate(db.Model):
     items = db.relationship("EstimateItem", backref="estimate", cascade="all, delete-orphan")
     inquiry = db.relationship("Inquiry", backref="estimate", uselist=False)
 
+    @property
+    def has_quote_required_items(self) -> bool:
+        return any(item.is_quote_required for item in self.items)
+
+    @property
+    def maintenance_price_label(self) -> str:
+        return "要相談" if self.maintenance_quote_required else f"{self.maintenance_monthly_price or 0:,}円／月"
+
 
 class EstimateItem(db.Model):
     __tablename__ = "estimate_items"
@@ -36,6 +68,11 @@ class EstimateItem(db.Model):
     estimate_id = db.Column(db.BigInteger, db.ForeignKey("estimates.id"), nullable=False)
     item_name = db.Column(db.String(120), nullable=False)
     price = db.Column(db.Integer, nullable=False)
+    is_quote_required = db.Column(db.Boolean, default=False, nullable=False)
+
+    @property
+    def price_label(self) -> str:
+        return "要相談" if self.is_quote_required else f"{self.price:,}円"
 
 
 class Inquiry(db.Model):
@@ -72,6 +109,11 @@ class DevicePriceMaster(db.Model):
 
     id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
     name = db.Column(db.String(120), unique=True, nullable=False)
+    plan_key = db.Column(db.String(20), default=SIMPLE_PLAN, nullable=False)
+
+    @property
+    def public_name(self) -> str:
+        return public_master_name(self.name)
     screen_unit_price = db.Column(db.Integer, nullable=False)
     sort_order = db.Column(db.Integer, default=0, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -83,12 +125,21 @@ class DevicePriceMaster(db.Model):
         nullable=False,
     )
 
+    feature_prices = db.relationship(
+        "FeatureDevicePriceMaster", backref="device", cascade="all, delete-orphan"
+    )
+
 
 class PackageMaster(db.Model):
     __tablename__ = "package_masters"
 
     id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
     name = db.Column(db.String(120), unique=True, nullable=False)
+    plan_key = db.Column(db.String(20), default=SIMPLE_PLAN, nullable=False)
+
+    @property
+    def public_name(self) -> str:
+        return public_master_name(self.name)
     screen_count = db.Column(db.Integer, nullable=False)
     price_label = db.Column(db.String(120))
     image_file = db.Column(db.String(255))
@@ -129,7 +180,13 @@ class FeatureMaster(db.Model):
 
     id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
     name = db.Column(db.String(120), unique=True, nullable=False)
+    plan_key = db.Column(db.String(20), default=SIMPLE_PLAN, nullable=False)
+
+    @property
+    def public_name(self) -> str:
+        return public_master_name(self.name)
     unit_price = db.Column(db.Integer, nullable=False)
+    is_quote_required = db.Column(db.Boolean, default=False, nullable=False)
     allow_quantity = db.Column(db.Boolean, default=False, nullable=False)
     category_name = db.Column(db.String(80))
     description = db.Column(db.Text)
@@ -149,6 +206,23 @@ class FeatureMaster(db.Model):
         "PackageFeatureMaster",
         backref="feature",
         cascade="all, delete-orphan",
+    )
+
+    device_prices = db.relationship(
+        "FeatureDevicePriceMaster", backref="feature", cascade="all, delete-orphan"
+    )
+
+
+class FeatureDevicePriceMaster(db.Model):
+    __tablename__ = "feature_device_price_masters"
+
+    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
+    feature_id = db.Column(db.BigInteger, db.ForeignKey("feature_masters.id"), nullable=False)
+    device_id = db.Column(db.BigInteger, db.ForeignKey("device_price_masters.id"), nullable=False)
+    unit_price = db.Column(db.Integer, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("feature_id", "device_id", name="uq_feature_device_price_master"),
     )
 
 

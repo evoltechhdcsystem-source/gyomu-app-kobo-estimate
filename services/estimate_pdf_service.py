@@ -6,21 +6,22 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from flask import current_app
+from PIL import Image as PILImage, ImageChops
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from models import Estimate
+from models import FULL_PLAN, SIMPLE_PLAN, Estimate, PlanMaster, db
 from services.estimate_display_service import (
     INCLUDED_WORK_ITEMS,
     estimate_item_condition,
     estimate_item_label,
 )
+from services.maintenance_service import GOOGLE_CLOUD_MONTHLY_MIN, monthly_total_note
 
 CONSUMPTION_TAX_RATE = 0.10
 
@@ -32,6 +33,8 @@ def estimate_pdf_download_name() -> str:
 
 def build_estimate_pdf(estimate: Estimate) -> BytesIO:
     _register_pdf_fonts()
+    table_padding = 3 if estimate.plan_key == FULL_PLAN else 4
+    plan = db.session.get(PlanMaster, estimate.plan_key)
     issued_on = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y年%m月%d日")
     subtotal = estimate.total_price
     tax_amount = _estimate_tax_amount(subtotal)
@@ -138,6 +141,11 @@ def build_estimate_pdf(estimate: Estimate) -> BytesIO:
                         _pdf_paragraph(issued_on, base),
                     ],
                     [
+                        _pdf_paragraph("プラン", label),
+                        _pdf_paragraph(plan.name if plan else "かんたんアプリプラン", base),
+                        "", "",
+                    ],
+                    [
                         _pdf_paragraph("利用端末", label),
                         _pdf_paragraph(estimate.device_type, base),
                         "",
@@ -150,7 +158,7 @@ def build_estimate_pdf(estimate: Estimate) -> BytesIO:
                         "",
                     ],
                     [
-                        _pdf_paragraph("合計（税込）", label),
+                        _pdf_paragraph("初期費用（税込）", label),
                         _pdf_paragraph(f"{total_with_tax:,}円", title),
                         "",
                         "",
@@ -163,14 +171,15 @@ def build_estimate_pdf(estimate: Estimate) -> BytesIO:
                         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff8f2")),
                         ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#e5ddd4")),
                         ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#e5ddd4")),
-                        ("SPAN", (1, 2), (3, 2)),
                         ("SPAN", (1, 1), (3, 1)),
+                        ("SPAN", (1, 2), (3, 2)),
                         ("SPAN", (1, 3), (3, 3)),
+                        ("SPAN", (1, 4), (3, 4)),
                         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                         ("LEFTPADDING", (0, 0), (-1, -1), 8),
                         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                        ("TOPPADDING", (0, 0), (-1, -1), 4),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                        ("TOPPADDING", (0, 0), (-1, -1), table_padding),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), table_padding),
                     ]
                 ),
             ),
@@ -193,7 +202,7 @@ def build_estimate_pdf(estimate: Estimate) -> BytesIO:
                         _pdf_paragraph(f"消費税（{int(CONSUMPTION_TAX_RATE * 100)}%）", label_right),
                         _pdf_paragraph(f"{tax_amount:,}円", amount),
                     ],
-                    [_pdf_paragraph("合計（税込）", label_right), _pdf_paragraph(f"{total_with_tax:,}円", total_amount)],
+                    [_pdf_paragraph("初期費用合計（税込）", label_right), _pdf_paragraph(f"{total_with_tax:,}円", total_amount)],
                 ],
                 colWidths=[124 * mm, 62 * mm],
                 repeatRows=1,
@@ -221,19 +230,79 @@ def build_estimate_pdf(estimate: Estimate) -> BytesIO:
                     "",
                     _pdf_paragraph(f"{tax_amount:,}円", amount),
                 ],
-                [_pdf_paragraph("合計（税込）", label_right), "", _pdf_paragraph(f"{total_with_tax:,}円", total_amount)],
+                [_pdf_paragraph("初期費用合計（税込）", label_right), "", _pdf_paragraph(f"{total_with_tax:,}円", total_amount)],
             ]
         )
         story.append(
             Table(
                 item_rows,
-                colWidths=[70 * mm, 54 * mm, 62 * mm],
+                colWidths=[70 * mm, 78 * mm, 38 * mm],
                 repeatRows=1,
                 style=_custom_estimate_table_style(total_row_start),
             )
         )
 
-    story.extend(_included_work_and_notes(base, label))
+    if estimate.has_quote_required_items:
+        story.extend([
+            Spacer(1, 2 * mm),
+            _pdf_paragraph(
+                "要相談の機能は上記金額に含まれません。詳細お見積りで金額をご案内します。",
+                base,
+            ),
+        ])
+
+    if estimate.plan_key == FULL_PLAN:
+        monthly_subtotal = GOOGLE_CLOUD_MONTHLY_MIN
+        if estimate.maintenance_monthly_price is not None and not estimate.maintenance_quote_required:
+            monthly_subtotal += estimate.maintenance_monthly_price
+        monthly_tax = _estimate_tax_amount(monthly_subtotal)
+        monthly_rows = [
+            [_pdf_paragraph("月額費用", label), _pdf_paragraph("金額", label_right)],
+            [
+                _pdf_paragraph("Google Cloud利用料", base),
+                _pdf_paragraph(f"{GOOGLE_CLOUD_MONTHLY_MIN:,}円～", amount),
+            ],
+        ]
+        if estimate.maintenance_monthly_price is not None:
+            monthly_rows.append([
+                _pdf_paragraph("サーバー保守", base),
+                _pdf_paragraph(estimate.maintenance_price_label.removesuffix("／月"), amount),
+            ])
+        total_row_start = len(monthly_rows)
+        monthly_rows.extend([
+            [_pdf_paragraph("小計", label_right), _pdf_paragraph(f"{monthly_subtotal:,}円～", amount)],
+            [
+                _pdf_paragraph(f"消費税（{int(CONSUMPTION_TAX_RATE * 100)}%）", label_right),
+                _pdf_paragraph(f"{monthly_tax:,}円～", amount),
+            ],
+            [
+                _pdf_paragraph("合計（税込）", label_right),
+                _pdf_paragraph(f"{monthly_subtotal + monthly_tax:,}円～", total_amount),
+            ],
+        ])
+        story.extend([
+            Spacer(1, 5 * mm),
+            Table(monthly_rows, colWidths=[124 * mm, 62 * mm], style=TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f3ffd9")),
+                ("BACKGROUND", (0, total_row_start), (-1, total_row_start + 1), colors.HexColor("#fff8f2")),
+                ("BACKGROUND", (0, total_row_start + 2), (-1, total_row_start + 2), colors.HexColor("#f3ffd9")),
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#e5ddd4")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#e5ddd4")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ])),
+            Spacer(1, 2 * mm),
+            _pdf_paragraph("月額費用は初期費用には含みません。Google Cloud利用料は利用するサービスや利用量、為替により変動します。", base),
+        ])
+        if monthly_total_note(estimate):
+            story.append(_pdf_paragraph(monthly_total_note(estimate), base))
+        if estimate.maintenance_monthly_price is None:
+            story.append(_pdf_paragraph("サーバー保守は含まれていません。ご希望の場合は見積り結果画面で追加できます。", base))
+
+    story.extend(_included_work_and_notes(base, label, estimate.plan_key, table_padding=table_padding))
     doc.build(story)
     buffer.seek(0)
     return buffer
@@ -252,17 +321,18 @@ def _pdf_paragraph(text: str, style: ParagraphStyle) -> Paragraph:
 
 def _register_pdf_fonts() -> None:
     if "HeiseiKakuGo-W5" not in pdfmetrics.getRegisteredFontNames():
-        pdfmetrics.registerFont(UnicodeCIDFont("HeiseiKakuGo-W5"))
+        font_path = Path(current_app.root_path) / "static" / "fonts" / "BIZUDGothic-Regular.ttf"
+        pdfmetrics.registerFont(TTFont("HeiseiKakuGo-W5", str(font_path)))
 
 
 def _estimate_pdf_items(estimate: Estimate) -> list[list[object]]:
     rows: list[list[object]] = []
     for item in estimate.items:
-        price = "" if estimate.package_type in {"基本パック", "運用パック"} else f"{item.price:,}円"
+        price = "" if estimate.package_type in {"基本パック", "運用パック"} else item.price_label
         rows.append(
             [
                 estimate_item_label(item.item_name),
-                estimate_item_condition(item.item_name, estimate.device_type),
+                estimate_item_condition(item.item_name, estimate.device_type, estimate.plan_key),
                 price,
             ]
         )
@@ -286,8 +356,19 @@ def _estimate_pdf_logo() -> Image | None:
     if logo_path is None:
         return None
 
-    image = Image(str(logo_path))
-    original_width, original_height = ImageReader(str(logo_path)).getSize()
+    with PILImage.open(logo_path) as source:
+        if source.mode == "RGBA":
+            visible_bounds = source.getchannel("A").getbbox()
+        else:
+            rgb = source.convert("RGB")
+            difference = ImageChops.difference(rgb, PILImage.new("RGB", rgb.size, "white")).convert("L")
+            visible_bounds = difference.point(lambda pixel: 255 if pixel > 15 else 0).getbbox()
+        bottom = min(source.height, visible_bounds[3] + round(source.height * 0.12)) if visible_bounds else source.height
+        logo_data = BytesIO()
+        source.crop((0, 0, source.width, bottom)).save(logo_data, format="PNG")
+        logo_data.seek(0)
+        original_width, original_height = source.width, bottom
+    image = Image(logo_data)
     image.drawWidth = 52 * mm
     image.drawHeight = image.drawWidth * original_height / original_width
     image.hAlign = "RIGHT"
@@ -366,12 +447,17 @@ def _custom_estimate_table_style(total_row_start: int) -> TableStyle:
     )
 
 
-def _included_work_and_notes(base: ParagraphStyle, label: ParagraphStyle) -> list[object]:
+def _included_work_and_notes(
+    base: ParagraphStyle, label: ParagraphStyle, plan_key: str, *, table_padding: int = 4
+) -> list[object]:
+    section_spacing = 3 * mm if plan_key == FULL_PLAN else 5 * mm
     included_work_rows = [[_pdf_paragraph("本見積りに含まれる作業", label)]]
     for item in INCLUDED_WORK_ITEMS:
+        if plan_key != SIMPLE_PLAN and item == "開発環境 Click の契約サポート":
+            continue
         included_work_rows.append([_pdf_paragraph(f"・{item}", base)])
-    return [
-        Spacer(1, 5 * mm),
+    notes = [
+        Spacer(1, section_spacing),
         Table(
             included_work_rows,
             colWidths=[186 * mm],
@@ -383,26 +469,32 @@ def _included_work_and_notes(base: ParagraphStyle, label: ParagraphStyle) -> lis
                     ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#e5ddd4")),
                     ("LEFTPADDING", (0, 0), (-1, -1), 8),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                    ("TOPPADDING", (0, 0), (-1, -1), 4),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, -1), table_padding),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), table_padding),
                 ]
             ),
         ),
-        Spacer(1, 5 * mm),
+        Spacer(1, section_spacing),
         _pdf_paragraph("別途費用・利用条件", ParagraphStyle("JapaneseNoteTitle", parent=base, fontSize=11, leading=14)),
         Spacer(1, 2 * mm),
-        _pdf_paragraph("開発ツールライセンス", ParagraphStyle("JapaneseNoteHead", parent=base, fontSize=10, leading=13)),
-        _pdf_paragraph(
-            "業務アプリの作成・公開・運用基盤としてノーコードツール「Click」を利用します。"
-            "ご利用にはClick Standardプラン以上（月額4,400円～）の契約が別途必要です。"
-            "合計金額には加算していません。",
-            label,
-        ),
-        Spacer(1, 2 * mm),
+    ]
+    if plan_key == SIMPLE_PLAN:
+        notes.extend([
+            _pdf_paragraph("開発ツールライセンス", ParagraphStyle("JapaneseNoteHead", parent=base, fontSize=10, leading=13)),
+            _pdf_paragraph(
+                "業務アプリの作成・公開・運用基盤としてノーコードツール「Click」を利用します。"
+                "ご利用にはClick Standardプラン以上（月額4,400円～）の契約が別途必要です。"
+                "合計金額には加算していません。",
+                label,
+            ),
+            Spacer(1, 2 * mm),
+        ])
+    notes.extend([
         _pdf_paragraph("外部AIサービス利用料", ParagraphStyle("JapaneseAiNoteHead", parent=base, fontSize=10, leading=13)),
         _pdf_paragraph(
             "OpenAI API等の外部AIサービスを利用する場合、その利用料は別途お客様のご負担となります。\n"
             "合計金額には加算していません。",
             label,
         ),
-    ]
+    ])
+    return notes

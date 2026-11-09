@@ -4,7 +4,7 @@
 <section class="container-fluid admin-wide py-4 py-lg-5">
   <datalist id="packageNameOptions">
     {% for package in packages %}
-      <option value="{{ package.name }}"></option>
+      <option value="{{ package.public_name }}"></option>
     {% endfor %}
   </datalist>
   <datalist id="featureCategoryOptions">
@@ -36,6 +36,27 @@
     <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">管理TOP</a>
   </div>
 
+  <div class="form-section mb-4" id="plan-settings">
+    <form method="get" action="{{ url_for('admin.masters') }}" class="d-flex gap-2 align-items-center mb-3">
+      <label for="master-plan">編集するプラン</label>
+      <select id="master-plan" name="plan" class="form-select w-auto" onchange="this.form.submit()">
+        {% for plan in plans %}<option value="{{ plan.key }}" {% if plan.key == selected_plan %}selected{% endif %}>{{ plan.name }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-outline-primary" type="submit">切替</button>
+    </form>
+    {% set plan = plans|selectattr('key', 'equalto', selected_plan)|first %}
+    <form method="post" action="{{ url_for('admin.update_plan_master', plan_key=selected_plan) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="plan_key" value="{{ selected_plan }}">
+      <div class="row g-2">
+        <div class="col-md-5"><label class="form-label">プラン名</label><input class="form-control" name="name" value="{{ plan.name }}" required></div>
+        <div class="col-md-2"><label class="form-label">公開</label><div><input type="checkbox" name="is_active" value="1" {% if plan.is_active %}checked{% endif %}></div></div>
+      </div>
+      <button class="btn btn-primary mt-3" type="submit">プラン設定を更新</button>
+    </form>
+    {% if selected_plan == 'full' and not plan.is_active %}<p class="small text-secondary mt-2">しっかりアプリプランは料金と項目を設定してから公開してください。</p>{% endif %}
+  </div>
+
   <div class="row g-4">
     <div class="col-12" id="device-prices">
       <div class="form-section">
@@ -57,9 +78,10 @@
                 <tr data-master-row="1" data-master-section="device-prices" data-save-url="{{ url_for('admin.update_device_master', master_id=row.id) }}">
                   <form method="post" action="{{ url_for('admin.update_device_master', master_id=row.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                     <input type="hidden" name="return_anchor" value="device-prices">
                     <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
-                    <td><input class="form-control form-control-sm" name="name" value="{{ row.name }}" list="packageNameOptions" required></td>
+                    <td><input class="form-control form-control-sm" name="name" value="{{ row.public_name }}" list="packageNameOptions" required></td>
                     <td><input class="form-control form-control-sm text-end" name="screen_unit_price" type="number" min="0" value="{{ row.screen_unit_price }}" required></td>
                     <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" {% if row.is_active %}checked{% endif %}></td>
                     <td class="text-end">
@@ -72,6 +94,7 @@
               <tr class="table-light">
                 <form method="post" action="{{ url_for('admin.create_device_master') }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                   <input type="hidden" name="return_anchor" value="device-prices">
                   <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
                   <td><input class="form-control form-control-sm" name="name" placeholder="新しい端末名" required></td>
@@ -89,7 +112,7 @@
     <div class="col-12" id="packages">
       <div class="form-section">
         <h2>パック</h2>
-        <p class="text-secondary small">パック選択画面のカード、見積結果の選択パック表示、標準画面定義との紐づけに反映されます。</p>
+        <p class="text-secondary small">パック選択画面のカード、見積結果の選択パック表示、標準画面定義との紐づけに反映されます。標準の3パックは名前を固定し、画面数や内容をプランごとに編集できます。</p>
         <div class="table-responsive">
           <table class="table table-sm align-middle">
             <thead>
@@ -115,9 +138,10 @@
                 <tr data-master-row="1" data-master-section="packages" data-save-url="{{ url_for('admin.update_package_master', master_id=row.id) }}">
                   <form method="post" action="{{ url_for('admin.update_package_master', master_id=row.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                     <input type="hidden" name="return_anchor" value="packages">
                     <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
-                    <td><input class="form-control form-control-sm" name="name" value="{{ row.name }}" required></td>
+                    <td><input class="form-control form-control-sm" name="name" value="{{ row.public_name }}" required></td>
                     <td><input class="form-control form-control-sm text-end" name="screen_count" type="number" min="0" value="{{ row.screen_count }}" required></td>
                     <td><input class="form-control form-control-sm" name="price_label" value="{{ row.price_label or '' }}"></td>
                     <td>
@@ -141,6 +165,7 @@
               <tr class="table-light">
                 <form method="post" action="{{ url_for('admin.create_package_master') }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                   <input type="hidden" name="return_anchor" value="packages">
                   <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
                   <td><input class="form-control form-control-sm" name="name" list="packageNameOptions" placeholder="新しいパック名" required></td>
@@ -167,7 +192,8 @@
     <div class="col-12" id="features">
       <div class="form-section">
         <h2>追加機能</h2>
-        <p class="text-secondary small">カスタム見積画面の追加機能一覧、条件・詳細表示、見積計算、パック内機能数の候補に反映されます。</p>
+        <p class="text-secondary small">しっかりプランの「サーバー保守/月」は、見積り結果画面で選ぶ月額オプションです。単価を月額として使い、初期費用には加算しません。数量指定は使用しません。</p>
+        <p class="text-secondary small">カスタム見積画面の追加機能一覧、条件・詳細表示、見積計算、パック内機能数の候補に反映されます。「要相談」にするとカスタムパックで選択されたときの単価を合計に加えずに表示します。基本・運用パックの金額には影響しません。</p>
         <div class="table-responsive">
           <table class="table table-sm align-middle">
             <thead>
@@ -175,6 +201,7 @@
                 <th>表示順</th>
                 <th>機能名</th>
                 <th class="text-end">単価</th>
+                <th>料金</th>
                 <th>カテゴリ</th>
                 <th>説明</th>
                 <th>条件</th>
@@ -189,13 +216,22 @@
             </thead>
             <tbody>
               {% for row in features %}
-                <tr data-master-row="1" data-master-section="features" data-save-url="{{ url_for('admin.update_feature_master', master_id=row.id) }}">
-                  <form method="post" action="{{ url_for('admin.update_feature_master', master_id=row.id) }}">
+                <tr data-master-row="1" data-master-section="features" data-save-url="{{ url_for('admin.update_feature_master', master_id=row.id) }}"{% if screen_item_feature and row.id == screen_item_feature.id %} data-feature-form-id="feature-form-{{ row.id }}"{% endif %}>
+                  <form id="feature-form-{{ row.id }}" method="post" action="{{ url_for('admin.update_feature_master', master_id=row.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                     <input type="hidden" name="return_anchor" value="features">
+                    {% if screen_item_feature and row.id == screen_item_feature.id %}<input type="hidden" name="update_device_prices" value="1">{% endif %}
                     <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
-                    <td><input class="form-control form-control-sm" name="name" value="{{ row.name }}" required></td>
-                    <td><input class="form-control form-control-sm text-end" name="unit_price" type="number" min="0" value="{{ row.unit_price }}" required></td>
+                    <td><input class="form-control form-control-sm" name="name" value="{{ row.public_name }}" required></td>
+                    <td>
+                      {% if screen_item_feature and row.id == screen_item_feature.id %}<small class="d-block text-secondary">共通単価</small>{% endif %}
+                      <input class="form-control form-control-sm text-end" name="unit_price" type="number" min="0" value="{{ row.unit_price }}" required>
+                      {% if screen_item_feature and row.id == screen_item_feature.id %}
+                        <button class="btn btn-link btn-sm p-0 mt-1" type="button" data-device-price-toggle="feature-device-prices-{{ row.id }}" aria-controls="feature-device-prices-{{ row.id }}" aria-expanded="false">端末別単価を開く</button>
+                      {% endif %}
+                    </td>
+                    <td><label class="form-check-label text-nowrap"><input class="form-check-input" name="is_quote_required" type="checkbox" value="1" {% if row.is_quote_required %}checked{% endif %}> 要相談</label></td>
                     <td><input class="form-control form-control-sm" name="category_name" value="{{ row.category_name or '' }}" list="featureCategoryOptions"></td>
                     <td><textarea class="form-control form-control-sm" name="description" rows="2">{{ row.description or '' }}</textarea></td>
                     <td><textarea class="form-control form-control-sm" name="condition" rows="2">{{ row.condition or '' }}</textarea></td>
@@ -210,14 +246,42 @@
                     </td>
                   </form>
                 </tr>
+                {% if screen_item_feature and row.id == screen_item_feature.id %}
+                  <tr id="feature-device-prices-{{ row.id }}" class="table-light" data-feature-device-row hidden>
+                    <td colspan="11">
+                      <div class="p-2">
+                        <strong>画面表示項目追加の端末別単価（カスタムパック）</strong>
+                        <p class="small text-secondary mb-2">空欄は共通単価を使用します。0円を入力すると0円で計算します。共通単価と端末別単価は上の「更新」で一緒に保存されます。</p>
+                        <div class="row g-3">
+                          {% for device in device_prices %}
+                            <div class="col-12 col-md-4">
+                              <label class="form-label small" for="feature-device-price-{{ row.id }}-{{ device.id }}">{{ device.public_name }}</label>
+                              <div class="input-group input-group-sm">
+                                <input id="feature-device-price-{{ row.id }}-{{ device.id }}" class="form-control text-end" form="feature-form-{{ row.id }}" name="device_price[{{ device.id }}]" type="number" min="0" value="{{ screen_item_device_prices.get(device.id, '') }}" placeholder="共通単価を使用">
+                                <span class="input-group-text">円</span>
+                              </div>
+                              {% if row.is_quote_required %}
+                                <small class="text-secondary">カスタムパックでは要相談（端末別単価は計算に使用しません）</small>
+                              {% else %}
+                                <small class="text-secondary">現在の適用単価：{{ "{:,}".format(screen_item_device_prices.get(device.id, row.unit_price)) }}円</small>
+                              {% endif %}
+                            </div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                {% endif %}
               {% endfor %}
               <tr class="table-light">
                 <form method="post" action="{{ url_for('admin.create_feature_master') }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                   <input type="hidden" name="return_anchor" value="features">
                   <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
                   <td><input class="form-control form-control-sm" name="name" placeholder="新しい機能名" required></td>
                   <td><input class="form-control form-control-sm text-end" name="unit_price" type="number" min="0" value="0" required></td>
+                  <td><label class="form-check-label text-nowrap"><input class="form-check-input" name="is_quote_required" type="checkbox" value="1"> 要相談</label></td>
                   <td><input class="form-control form-control-sm" name="category_name" value="基本機能" list="featureCategoryOptions"></td>
                   <td><textarea class="form-control form-control-sm" name="description" rows="2"></textarea></td>
                   <td><textarea class="form-control form-control-sm" name="condition" rows="2"></textarea></td>
@@ -253,10 +317,11 @@
                 <tr data-master-row="1" data-master-section="package-features" data-save-url="{{ url_for('admin.update_package_feature_master', master_id=row.id) }}">
                   <form method="post" action="{{ url_for('admin.update_package_feature_master', master_id=row.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                     <input type="hidden" name="return_anchor" value="package-features">
                     <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
-                    <td>{{ row.package.name }}</td>
-                    <td>{{ row.feature.name }}</td>
+                    <td>{{ row.package.public_name }}</td>
+                    <td>{{ row.feature.public_name }}</td>
                     <td><input class="form-control form-control-sm text-end" name="quantity" type="number" min="1" value="{{ row.quantity }}" required></td>
                     <td class="text-end">
                       <button class="btn btn-outline-primary btn-sm">更新</button>
@@ -268,19 +333,20 @@
               <tr class="table-light">
                 <form method="post" action="{{ url_for('admin.create_package_feature_master') }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                   <input type="hidden" name="return_anchor" value="package-features">
                   <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
                   <td>
                     <select class="form-select form-select-sm" name="package_id" required>
                       {% for package in packages %}
-                        <option value="{{ package.id }}">{{ package.name }}</option>
+                        <option value="{{ package.id }}">{{ package.public_name }}</option>
                       {% endfor %}
                     </select>
                   </td>
                   <td>
                     <select class="form-select form-select-sm" name="feature_id" required>
                       {% for feature in features %}
-                        <option value="{{ feature.id }}">{{ feature.name }}</option>
+                        <option value="{{ feature.id }}">{{ feature.public_name }}</option>
                       {% endfor %}
                     </select>
                   </td>
@@ -315,9 +381,10 @@
                 <tr data-master-row="1" data-master-section="package-display-items" data-save-url="{{ url_for('admin.update_package_display_item_master', master_id=row.id) }}">
                   <form method="post" action="{{ url_for('admin.update_package_display_item_master', master_id=row.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                     <input type="hidden" name="return_anchor" value="package-display-items">
                     <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
-                    <td>{{ row.package.name }}</td>
+                    <td>{{ row.package.public_name }}</td>
                     <td><input class="form-control form-control-sm" name="text" value="{{ row.text }}" required></td>
                     <td class="text-center"><input class="form-check-input" name="is_section" type="checkbox" value="1" {% if row.is_section %}checked{% endif %}></td>
                     <td class="text-center"><input class="form-check-input" name="is_active" type="checkbox" value="1" {% if row.is_active %}checked{% endif %}></td>
@@ -331,12 +398,13 @@
               <tr class="table-light">
                 <form method="post" action="{{ url_for('admin.create_package_display_item_master') }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                   <input type="hidden" name="return_anchor" value="package-display-items">
                   <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
                   <td>
                     <select class="form-select form-select-sm" name="package_id" required>
                       {% for package in packages %}
-                        <option value="{{ package.id }}">{{ package.name }}</option>
+                        <option value="{{ package.id }}">{{ package.public_name }}</option>
                       {% endfor %}
                     </select>
                   </td>
@@ -374,9 +442,10 @@
                 <tr data-master-row="1" data-master-section="package-screen-definitions" data-save-url="{{ url_for('admin.update_package_screen_definition_master', master_id=row.id) }}">
                   <form method="post" action="{{ url_for('admin.update_package_screen_definition_master', master_id=row.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                     <input type="hidden" name="return_anchor" value="package-screen-definitions">
                     <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ row.sort_order }}"></td>
-                    <td>{{ row.package.name }}</td>
+                    <td>{{ row.package.public_name }}</td>
                     <td><input class="form-control form-control-sm" name="section_title" value="{{ row.section_title or '' }}"></td>
                     <td><input class="form-control form-control-sm" name="screen_name" value="{{ row.screen_name }}" required></td>
                     <td>
@@ -400,12 +469,13 @@
               <tr class="table-light">
                 <form method="post" action="{{ url_for('admin.create_package_screen_definition_master') }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                   <input type="hidden" name="return_anchor" value="package-screen-definitions">
                   <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
                   <td>
                     <select class="form-select form-select-sm" name="package_id" required>
                       {% for package in packages %}
-                        <option value="{{ package.id }}">{{ package.name }}</option>
+                        <option value="{{ package.id }}">{{ package.public_name }}</option>
                       {% endfor %}
                     </select>
                   </td>
@@ -440,9 +510,10 @@
                   <tr data-master-row="1" data-master-section="package-screen-features" data-save-url="{{ url_for('admin.update_package_screen_feature_definition_master', master_id=feature.id) }}">
                     <form method="post" action="{{ url_for('admin.update_package_screen_feature_definition_master', master_id=feature.id) }}">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                       <input type="hidden" name="return_anchor" value="package-screen-features">
                       <td><input class="form-control form-control-sm" name="sort_order" type="number" value="{{ feature.sort_order }}"></td>
-                      <td>{{ screen.package.name }} / {{ screen.screen_name }}</td>
+                      <td>{{ screen.package.public_name }} / {{ screen.screen_name }}</td>
                       <td><input class="form-control form-control-sm" name="label" value="{{ feature.label }}" required></td>
                       <td>
                         <select class="form-select form-select-sm" name="css_class">
@@ -464,12 +535,13 @@
               <tr class="table-light">
                 <form method="post" action="{{ url_for('admin.create_package_screen_feature_definition_master') }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="plan_key" value="{{ selected_plan }}">
                   <input type="hidden" name="return_anchor" value="package-screen-features">
                   <td><input class="form-control form-control-sm" name="sort_order" type="number" value="100"></td>
                   <td>
                     <select class="form-select form-select-sm" name="screen_definition_id" required>
                       {% for screen in package_screen_definitions %}
-                        <option value="{{ screen.id }}">{{ screen.package.name }} / {{ screen.screen_name }}</option>
+                        <option value="{{ screen.id }}">{{ screen.package.public_name }} / {{ screen.screen_name }}</option>
                       {% endfor %}
                     </select>
                   </td>
@@ -618,8 +690,16 @@
     return field.value || "";
   }
 
+  function rowFields(row) {
+    const fields = Array.from(row.querySelectorAll("input, textarea, select"));
+    if (row.dataset.featureFormId) {
+      fields.push(...document.querySelectorAll(`[form="${row.dataset.featureFormId}"]`));
+    }
+    return fields;
+  }
+
   function watchedFields(scope) {
-    return Array.from(scope.querySelectorAll("input, textarea, select")).filter((field) => {
+    return rowFields(scope).filter((field) => {
       return field.name && !ignoreFieldNames.has(field.name);
     });
   }
@@ -653,7 +733,7 @@
 
   function buildFormData(row) {
     const formData = new FormData();
-    Array.from(row.querySelectorAll("input, textarea, select")).forEach((field) => {
+    rowFields(row).forEach((field) => {
       if (!field.name || field.name === "delete") {
         return;
       }
@@ -746,6 +826,22 @@
 
   createBulkButtons();
 
+  document.querySelectorAll("[data-device-price-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const detail = document.getElementById(button.dataset.devicePriceToggle);
+      detail.hidden = !detail.hidden;
+      button.setAttribute("aria-expanded", String(!detail.hidden));
+      button.textContent = detail.hidden ? "端末別単価を開く" : "端末別単価を閉じる";
+    });
+  });
+
+  document.addEventListener("invalid", (event) => {
+    const detail = event.target.closest("[data-feature-device-row]");
+    if (detail && detail.hidden) {
+      document.querySelector(`[data-device-price-toggle="${detail.id}"]`)?.click();
+    }
+  }, true);
+
   watchedRows.forEach((row) => {
     watchedFields(row).forEach((field) => {
       field.dataset.initialValue = fieldValue(field);
@@ -755,7 +851,7 @@
     ensureDirtyMark(row);
   });
 
-  document.querySelectorAll("[data-master-row] button").forEach((button) => {
+  document.querySelectorAll("[data-master-row] button:not([type='button'])").forEach((button) => {
     button.addEventListener("click", () => {
       allowSubmit = true;
       window.setTimeout(() => {
